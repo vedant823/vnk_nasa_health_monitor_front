@@ -1,0 +1,562 @@
+openapi: 3.1.0
+info:
+  title: Health Monitor API
+  version: 1.0.0
+  description: |
+    Crew health monitoring backend (NASA Space Apps). Astronauts log measurements;
+    the backend scores them against guideline ranges into per-risk health scores
+    (1-100), tracks readings against the user's own baseline, and produces
+    daily/weekly/monthly measurement reminders.
+
+    Auth: `POST /users/login` creates an account and `PUT /users/login` logs in -
+    both return the token as a raw JSON string body. Send it as
+    `Authorization: Bearer <token>` on every `/users/**` request.
+    `/data/**` is public static content.
+
+    Import this file into Hoppscotch via *Import from OpenAPI*, or into
+    Postman, Insomnia, and most other API tools.
+servers:
+  - url: http://localhost:8080
+tags:
+  - name: Auth
+    description: Account creation and login
+  - name: User data
+    description: User data, reminders, and risk scores (Bearer token required)
+  - name: Static data
+    description: Risk and measurement definitions (no auth)
+paths:
+  /users/login:
+    post:
+      tags: [Auth]
+      operationId: createAccount
+      summary: Create an account
+      description:
+        Creates a new account with the given credentials, initializes every
+        measurement's reminder frequency to the default (7 days), and returns the
+        new account's token. Fails with 409 if the username is already taken.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: The token, as a raw JSON string body (e.g. `"3f2c9a1e-..."`)
+          content:
+            application/json:
+              schema:
+                type: string
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+    put:
+      tags: [Auth]
+      operationId: login
+      summary: Log in
+      description:
+        Verifies the credentials and returns the existing account's token, so
+        logging in on another device returns the same token. Fails with 401 for
+        wrong credentials. PUT (not GET) because the request carries a credentials
+        body, which browsers cannot send with GET — and login is idempotent, which
+        fits PUT semantics.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: The token, as a raw JSON string body
+          content:
+            application/json:
+              schema:
+                type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+  /users/measurements/{measurementID}:
+    get:
+      tags: [User data]
+      operationId: getMeasurements
+      summary: Get a measurement's logged history
+      description:
+        Returns the user's logged history for one measurement, newest first.
+        Values of baseline-relative measurements are served as the change from the
+        user's baseline (percent or plain difference per `baselineMode`); absolute
+        measurements are returned raw.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/MeasurementID"
+      responses:
+        "200":
+          description: The history, newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MeasurementSet"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      tags: [User data]
+      operationId: logMeasurement
+      summary: Log a measurement
+      description:
+        Logs one reading as a MeasurementSet and updates the measurement's
+        last-taken time, which drives reminders and risk scoring. The first logged
+        reading of a baseline-relative measurement becomes the user's baseline;
+        later readings are stored raw and converted on the way out. Numerical
+        measurements require `values` (finite, and non-negative unless the
+        measurement `canBeNegative`); visual measurements require `image`
+        (base64). Returns an empty 200 body.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/MeasurementID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LogMeasurementRequest"
+      responses:
+        "200":
+          description: Logged (empty body)
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /users/measurements/{measurementID}/frequency:
+    put:
+      tags: [User data]
+      operationId: setFrequency
+      summary: Set the reminder frequency
+      description:
+        Sets how many days pass between reminders for one measurement (the
+        frontend's frequency dropdown). The next due date becomes last-taken plus
+        this many days. Returns an empty 200 body.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/MeasurementID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateFrequencyRequest"
+      responses:
+        "200":
+          description: Updated (empty body)
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /users/measurements/{measurementID}/trend:
+    get:
+      tags: [User data]
+      operationId: getTrend
+      summary: Get a measurement's trend direction
+      description:
+        Compares the measurement's two most recent baseline-adjusted readings and
+        returns their direction — a lightweight hint for the frontend graphs, no
+        statistical modelling. `up` and `down` are raw directions; whether that is
+        good or bad depends on the measurement.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/MeasurementID"
+      responses:
+        "200":
+          description: The trend direction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeasurementTrend"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /users/upcoming:
+    get:
+      tags: [User data]
+      operationId: getUpcoming
+      summary: Get upcoming reminders
+      description:
+        Lists every measurement due within the given window, ordered by due date.
+        A measurement is due when `lastTaken + frequencyDays` has passed, or
+        immediately if never taken — so a fresh account's list is the complete
+        baseline checklist.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: withinDays
+          in: query
+          required: false
+          description: Window in days (default 30)
+          schema:
+            type: integer
+            default: 30
+      responses:
+        "200":
+          description: Reminders, dueDate ascending
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Reminder"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /users/risks:
+    get:
+      tags: [User data]
+      operationId: getRisks
+      summary: Get all risk scores
+      description:
+        Scores every risk factor for the user with the rule-based JudgementService
+        (start at 100; −40 per abnormal and −75 per dangerous latest reading,
+        stacked, floored at 1). Risks without measurements yet always score 100.
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: One evaluation per risk factor
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RiskEvaluation"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /users/risks/{riskID}:
+    get:
+      tags: [User data]
+      operationId: getRisk
+      summary: Get one risk score
+      description:
+        Returns one risk's score, the advice list (the recommendation string of
+        every violated measurement, most severe first), and a reason string
+        describing each violation.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/RiskID"
+      responses:
+        "200":
+          description: The risk evaluation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RiskEvaluation"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /users/digest:
+    get:
+      tags: [User data]
+      operationId: getDigest
+      summary: Get the daily/weekly/monthly digest
+      description: >-
+        Returns the user's daily/weekly/monthly reminder digest — the exact
+        buckets the scheduled notification sender delivers, built from one 30-day
+        snapshot and partitioned into disjoint buckets. Each measurement lands in
+        exactly one bucket, the smallest window it is due within (daily holds the
+        urgent, including overdue, set; a fresh user's weekly and monthly buckets
+        are empty).
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: The digest
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReminderDigest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /data/risks:
+    get:
+      tags: [Static data]
+      operationId: listRisks
+      summary: List all risk factors
+      description:
+        Returns every risk factor in file order, so the frontend's home grid
+        hardcodes nothing. No authentication.
+      responses:
+        "200":
+          description: All risk factors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RiskFactor"
+  /data/risks/{riskID}:
+    get:
+      tags: [Static data]
+      operationId: getRiskFactor
+      summary: Get one risk factor
+      description:
+        Returns one risk's display name, category, the reason to pay attention to
+        it, and its child measurement IDs (empty for risks with no usable data
+        yet).
+      parameters:
+        - $ref: "#/components/parameters/RiskID"
+      responses:
+        "200":
+          description: The risk factor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RiskFactor"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /data/measurements/{measurementID}:
+    get:
+      tags: [Static data]
+      operationId: getMeasurement
+      summary: Get a measurement's definition and instructions
+      description: >-
+        Returns one measurement's full definition - display name, category, unit,
+        guideline bounds (optional per side), baseline mode, the low/high
+        recommendation strings, and the step-by-step instructions. Merged at
+        startup from measurementDetails.json and measurementInstructions.json.
+      parameters:
+        - $ref: "#/components/parameters/MeasurementID"
+      responses:
+        "200":
+          description: The measurement
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Measurement"
+        "404":
+          $ref: "#/components/responses/NotFound"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: The token returned by POST/PUT /users/login
+  parameters:
+    MeasurementID:
+      name: measurementID
+      in: path
+      required: true
+      description: A measurement ID from the data endpoints (e.g. `body_mass_change`)
+      schema:
+        type: string
+    RiskID:
+      name: riskID
+      in: path
+      required: true
+      description: A risk ID from `GET /data/risks` (e.g. `nutrition`)
+      schema:
+        type: string
+  responses:
+    BadRequest:
+      description:
+        Bad request — missing Authorization header, validation error, or invalid
+        measurement values
+    Unauthorized:
+      description: Invalid token or wrong credentials
+    NotFound:
+      description: Unknown measurement or risk ID
+    Conflict:
+      description: Username already taken
+  schemas:
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+    LogMeasurementRequest:
+      type: object
+      description:
+        Exactly one of `values` (numerical measurements) or `image` (visual
+        measurements, base64) must be present, matching the measurement's
+        category.
+      properties:
+        values:
+          type: array
+          description: Required for numerical measurements
+          items:
+            type: number
+        image:
+          type: string
+          description: Required for visual measurements (base64-encoded)
+    UpdateFrequencyRequest:
+      type: object
+      required: [frequencyDays]
+      properties:
+        frequencyDays:
+          type: integer
+          minimum: 1
+          description: Days between reminders
+    MeasurementCategory:
+      type: string
+      enum: [numerical, visual]
+    BaselineMode:
+      type: string
+      enum: [none, percent, difference]
+      description: |
+        How a numerical measurement relates to a user's baseline reading.
+        `percent` converts raw readings to percent change from baseline
+        (e.g. body mass), `difference` to the plain delta in the measurement's
+        unit (e.g. retinal thickness in micrometres), and `none` means the
+        reading is absolute and needs no baseline.
+    TrendDirection:
+      type: string
+      enum: [up, down, flat]
+    MeasurementSet:
+      type: object
+      description: >
+        One logged measurement event. Exactly one of `values` or `images` is
+        populated, matching the measurement's category. Served values of
+        baseline-relative measurements are the change from the user's baseline.
+      properties:
+        measurementId:
+          type: string
+        userId:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        values:
+          type: [array, "null"]
+          items:
+            type: number
+        images:
+          type: [array, "null"]
+          items:
+            type: string
+    Instruction:
+      type: object
+      properties:
+        image:
+          type: string
+          description: Image reference for the step
+        text:
+          type: string
+          description: Step text
+    Measurement:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        category:
+          $ref: "#/components/schemas/MeasurementCategory"
+        unit:
+          type: [string, "null"]
+        dangerousLow:
+          type: [number, "null"]
+        abnormalLow:
+          type: [number, "null"]
+        abnormalHigh:
+          type: [number, "null"]
+        dangerousHigh:
+          type: [number, "null"]
+        canBeNegative:
+          type: boolean
+        baselineMode:
+          $ref: "#/components/schemas/BaselineMode"
+        lowRecommendation:
+          type: [string, "null"]
+        highRecommendation:
+          type: [string, "null"]
+        instructions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Instruction"
+    RiskCategory:
+      type: string
+      enum: [physical, psychological]
+    RiskFactor:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        category:
+          $ref: "#/components/schemas/RiskCategory"
+        measurementIds:
+          type: array
+          description: Child measurements (empty for risks with no usable data yet)
+          items:
+            type: string
+        reason:
+          type: string
+          description: Why to pay attention to this risk
+    RiskEvaluation:
+      type: object
+      description:
+        Score starts at 100 and is lowered by abnormal measurements (floor of 1).
+        `advice` collects the recommendation string of every abnormal
+        measurement, most severe first.
+      properties:
+        riskId:
+          type: string
+        score:
+          type: integer
+          minimum: 1
+          maximum: 100
+        advice:
+          type: array
+          items:
+            type: string
+        reason:
+          type: string
+    Reminder:
+      type: object
+      description: An upcoming measurement the user needs to take.
+      properties:
+        measurementId:
+          type: string
+        dueDate:
+          type: string
+          format: date-time
+    ReminderDigest:
+      type: object
+      description: >
+        The daily/weekly/monthly reminder digest. The buckets are disjoint:
+        every measurement due within a month appears in exactly one bucket, the
+        smallest window it falls within — daily holds the urgent (including
+        overdue) set, weekly the rest of the week, monthly the rest of the month.
+      properties:
+        username:
+          type: string
+        daily:
+          type: array
+          items:
+            $ref: "#/components/schemas/Reminder"
+        weekly:
+          type: array
+          items:
+            $ref: "#/components/schemas/Reminder"
+        monthly:
+          type: array
+          items:
+            $ref: "#/components/schemas/Reminder"
+    MeasurementTrend:
+      type: object
+      properties:
+        measurementId:
+          type: string
+        direction:
+          oneOf:
+            - $ref: "#/components/schemas/TrendDirection"
+            - type: "null"
+          description: Null when there is not enough history to compare
