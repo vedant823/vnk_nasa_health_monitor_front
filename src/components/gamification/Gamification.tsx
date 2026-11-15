@@ -79,6 +79,11 @@ export function BadgeShelf({ badges }: { badges: Badge[] }) {
             <span className="badge-icon"><Icon name={badge.earned ? 'badge' : 'lock'} size={22} /></span>
             <span className="badge-name">{badge.name}</span>
             <span className="muted small">{badge.earned ? 'Earned' : badge.how}</span>
+            {!badge.earned && (
+              <span className="badge-progress" role="progressbar" aria-label={`${badge.name} progress`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(badge.progress * 100)}>
+                <span style={{ width: `${Math.round(badge.progress * 100)}%` }} />
+              </span>
+            )}
           </li>
         ))}
       </ul>

@@ -73,3 +73,35 @@ export interface LogMeasurementRequest {
   values?: number[];
   image?: string;
 }
+
+/** One rule inside a badge. Every reading of a listed measurement type counts towards it. */
+export interface BadgeCriterion {
+  measurementType: string[];
+  /** Each counted reading must be on a different day. */
+  distinctDays: boolean;
+  /** With distinctDays: the days must be consecutive. */
+  streak: boolean;
+  /** Only readings in the healthy (green) range count. */
+  isOk: boolean;
+  count: number;
+}
+
+/** A badge is granted when all of its criteria are satisfied. */
+export interface BadgeRule {
+  title: string;
+  /** Plain sentence shown under the badge. Optional: the app writes one from the criteria if missing. */
+  description?: string;
+  criteria: BadgeCriterion[];
+}
+
+/** An unearned badge with one progress fraction (0 to 1) per criterion, in criterion order. */
+export interface BadgeStatus {
+  badge: BadgeRule;
+  progress: number[];
+}
+
+/** GET /users/badges: the backend works out which badges are earned from the user's history. */
+export interface BadgeSet {
+  earned: BadgeRule[];
+  unearned: BadgeStatus[];
+}

@@ -14,6 +14,9 @@ export const useRiskFactor = (riskId: string) =>
 export const useMeasurement = (measurementId: string) =>
   useQuery({ queryKey: ['measurement', measurementId], queryFn: () => data.getMeasurement(measurementId), ...STATIC });
 
+/** The user's badges, evaluated by the backend (GET /users/badges). */
+export const useBadges = () => useQuery({ queryKey: ['badges'], queryFn: user.getBadges });
+
 export const useRiskScores = () => useQuery({ queryKey: ['riskScores'], queryFn: user.getRiskScores });
 export const useRiskScore = (riskId: string) =>
   useQuery({ queryKey: ['riskScore', riskId], queryFn: () => user.getRiskScore(riskId) });
@@ -32,7 +35,22 @@ export function useLogMeasurement(measurementId: string) {
     // A new reading changes history, trend, reminders and every risk score that uses it.
     onSuccess: () =>
       Promise.all(
-        [['history', measurementId], ['trend', measurementId], ['upcoming'], ['digest'], ['riskScores'], ['riskScore']].map(
+        [['history', measurementId], ['trend', measurementId], ['upcoming'], ['digest'], ['riskScores'], ['riskScore'], ['badges']].map(
+          (queryKey) => queryClient.invalidateQueries({ queryKey }),
+        ),
+      ),
+  });
+}
+
+/** Deletes one reading: the newest when no index is given, otherwise that position in the newest-first history. */
+export function useDeleteMeasurement(measurementId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (measurementIndex?: number) => user.deleteMeasurement(measurementId, measurementIndex),
+    // Removing a reading changes the same things that adding one does.
+    onSuccess: () =>
+      Promise.all(
+        [['history', measurementId], ['trend', measurementId], ['upcoming'], ['digest'], ['riskScores'], ['riskScore'], ['badges']].map(
           (queryKey) => queryClient.invalidateQueries({ queryKey }),
         ),
       ),

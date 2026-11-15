@@ -1,0 +1,161 @@
+{
+  "badges": [
+    {
+      "title": "First Check-in",
+      "description": "Log any measurement once.",
+      "criteria": [
+        {
+          "measurementType": [
+            "white_blood_cells",
+            "lymphocytes",
+            "body_mass_change",
+            "grip_strength_change",
+            "intraocular_pressure",
+            "retinal_thickness_change",
+            "oct_fundus_scan",
+            "stand_test_systolic_drop",
+            "resting_heart_rate",
+            "ejection_fraction",
+            "sleep_duration",
+            "memory_score_change",
+            "balance_score_change",
+            "mood_score",
+            "solar_proton_flux"
+          ],
+          "distinctDays": false,
+          "streak": false,
+          "isOk": false,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "title": "Week Streak",
+      "description": "Log at least one measurement a day for 7 days in a row.",
+      "criteria": [
+        {
+          "measurementType": [
+            "white_blood_cells",
+            "lymphocytes",
+            "body_mass_change",
+            "grip_strength_change",
+            "intraocular_pressure",
+            "retinal_thickness_change",
+            "oct_fundus_scan",
+            "stand_test_systolic_drop",
+            "resting_heart_rate",
+            "ejection_fraction",
+            "sleep_duration",
+            "memory_score_change",
+            "balance_score_change",
+            "mood_score",
+            "solar_proton_flux"
+          ],
+          "distinctDays": true,
+          "streak": true,
+          "isOk": false,
+          "count": 7
+        }
+      ]
+    },
+    {
+      "title": "Eagle Eye",
+      "description": "Log one eye pressure reading and one eye scan.",
+      "criteria": [
+        {
+          "measurementType": [
+            "intraocular_pressure"
+          ],
+          "distinctDays": false,
+          "streak": false,
+          "isOk": false,
+          "count": 1
+        },
+        {
+          "measurementType": [
+            "oct_fundus_scan"
+          ],
+          "distinctDays": false,
+          "streak": false,
+          "isOk": false,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "title": "Deep Sleeper",
+      "description": "Log 2 sleep readings in the healthy range.",
+      "criteria": [
+        {
+          "measurementType": [
+            "sleep_duration"
+          ],
+          "distinctDays": false,
+          "streak": false,
+          "isOk": true,
+          "count": 2
+        }
+      ]
+    },
+    {
+      "title": "Steady Horizon",
+      "description": "Log 3 balance checks in the healthy range.",
+      "criteria": [
+        {
+          "measurementType": [
+            "balance_score_change"
+          ],
+          "distinctDays": false,
+          "streak": false,
+          "isOk": true,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "title": "Strong Grip",
+      "description": "Log 3 grip strength checks in the healthy range.",
+      "criteria": [
+        {
+          "measurementType": [
+            "grip_strength_change"
+          ],
+          "distinctDays": false,
+          "streak": false,
+          "isOk": true,
+          "count": 3
+        }
+      ]
+    },
+    {
+      "title": "Mind Zen",
+      "description": "Log your mood 7 days in a row.",
+      "criteria": [
+        {
+          "measurementType": [
+            "mood_score"
+          ],
+          "distinctDays": true,
+          "streak": true,
+          "isOk": false,
+          "count": 7
+        }
+      ]
+    },
+    {
+      "title": "Storm Watch",
+      "description": "Check solar proton flux 5 times.",
+      "criteria": [
+        {
+          "measurementType": [
+            "solar_proton_flux"
+          ],
+          "distinctDays": false,
+          "streak": false,
+          "isOk": false,
+          "count": 5
+        }
+      ]
+    }
+  ]
+}

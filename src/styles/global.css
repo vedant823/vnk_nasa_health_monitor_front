@@ -164,6 +164,8 @@ main { flex: 1; width: 100%; max-width: 1240px; margin: 0 auto; padding: 28px 24
 .btn-text { color: var(--accent-ink); padding: 0 12px; min-height: 40px; }
 .btn-text:hover { background: var(--accent-tint); }
 .btn-wide { width: 100%; }
+.btn-danger { background: var(--red); color: var(--surface); min-height: 40px; padding: 0 14px; }
+.btn-danger:hover:not(:disabled) { filter: brightness(0.92); }
 
 .field { display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 500; min-width: 0; }
 .field.inline { flex-direction: row; align-items: center; gap: 12px; font-size: 16px; }
@@ -278,6 +280,8 @@ button.legend-btn:hover, .legend-btn.selected { background: var(--accent-tint); 
 .badge-icon { color: var(--muted); }
 .badge.earned .badge-icon { color: var(--accent-ink); }
 .badge-name { font-weight: 600; }
+.badge-progress { display: block; height: 4px; border-radius: 2px; background: var(--hairline); margin-top: 8px; overflow: hidden; }
+.badge-progress > span { display: block; height: 100%; background: var(--accent); border-radius: 2px; }
 .badge-toast, .toast { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: var(--accent-tint); border-radius: var(--radius-sm); padding: 10px 12px; }
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 30; border: 1px solid var(--accent); box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18); max-width: calc(100vw - 32px); }
 
@@ -290,6 +294,17 @@ button.legend-btn:hover, .legend-btn.selected { background: var(--accent-tint); 
 .advice { background: var(--z-bg); border-radius: var(--radius-sm); padding: 12px; }
 .mini-risks { display: flex; flex-direction: column; }
 .mini-risks li { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: center; padding: 8px 0; border-top: 1px solid var(--hairline); }
+
+/* Saved readings log (delete) */
+.reading-log { display: flex; flex-direction: column; }
+.reading-log li { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto auto; gap: 12px; align-items: center; padding: 8px 0; border-top: 1px solid var(--hairline); }
+.reading-when { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 14px; }
+.reading-actions { display: flex; gap: 4px; justify-content: flex-end; }
+.mood-saved { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+@media (max-width: 560px) {
+  .reading-log li { grid-template-columns: 1fr auto; }
+  .reading-log .chip { justify-self: start; }
+}
 
 /* Escalation */
 .escalation { border-color: var(--z); background: var(--z-bg); }

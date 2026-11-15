@@ -1,9 +1,10 @@
 // AI-generated code (Claude by Anthropic), reviewed by team VNK. See AI_DISCLOSURE.md.
 // Streak, weekly progress, readiness score and badges. Everything is worked out in the browser
-// from the measurement history the backend returns.
-import type { Measurement, MeasurementSet } from '../api/types';
+// from the measurement history the backend returns. Badges are the exception: the backend
+// decides which are earned (GET /users/badges) and this file only formats them.
+import type { BadgeCriterion, BadgeRule, BadgeSet, Measurement, MeasurementSet } from '../api/types';
 import { DAY, dayKey, toMillis } from './dates';
-import { classify, scoreZone, setValue, sortOldestFirst, type Zone } from './zones';
+import { scoreZone, type Zone } from './zones';
 
 export type Histories = Record<string, MeasurementSet[] | undefined>;
 
@@ -47,65 +48,50 @@ export interface Badge {
   name: string;
   how: string;
   earned: boolean;
+  /** 0 to 1: how far along the badge is (the average over its criteria). */
+  progress: number;
 }
 
-function loggedDays(history: MeasurementSet[] | undefined): Set<string> {
-  return new Set((history ?? []).map((set) => dayKey(toMillis(set.timestamp))));
+function criterionText(c: BadgeCriterion, measurements: Record<string, Measurement | undefined>): string {
+  const known = Object.keys(measurements).filter((id) => measurements[id]);
+  const coversAll = known.length > 0 && known.every((id) => c.measurementType.includes(id));
+  const names = coversAll ? 'any measurement' : c.measurementType.map((id) => measurements[id]?.name ?? id.replace(/_/g, ' ')).join(' or ');
+  const ok = c.isOk ? ' in the healthy range' : '';
+  if (c.streak) return `log ${names}${ok} on ${c.count} days in a row`;
+  if (c.distinctDays) return `log ${names}${ok} on ${c.count} different days`;
+  return `log ${names}${ok} ${c.count === 1 ? 'once' : `${c.count} times`}`;
 }
 
-function dayRun(days: Set<string>, now: number): number {
-  let cursor = now;
-  if (!days.has(dayKey(cursor))) cursor -= DAY;
-  let run = 0;
-  while (days.has(dayKey(cursor))) {
-    run += 1;
-    cursor -= DAY;
-  }
-  return run;
-}
+const slug = (title: string) => title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
-function lastGreen(m: Measurement | undefined, history: MeasurementSet[] | undefined, count: number): boolean {
-  if (!m || !history || history.length < count) return false;
-  return sortOldestFirst(history)
-    .slice(-count)
-    .every((set) => {
-      const value = setValue(set);
-      return value !== null && classify(value, m).zone === 'green';
-    });
+function toBadge(rule: BadgeRule, earned: boolean, progress: number, measurements: Record<string, Measurement | undefined>): Badge {
+  const criteria = Array.isArray(rule.criteria) ? rule.criteria : [];
+  const how = criteria.map((c) => criterionText(c, measurements)).join(', and ');
+  return {
+    id: slug(rule.title),
+    name: rule.title,
+    // Use the badge's own description when the backend sends one; otherwise describe its criteria.
+    how: typeof rule.description === 'string' && rule.description.trim() ? rule.description.trim() : how ? `${how.charAt(0).toUpperCase()}${how.slice(1)}.` : '',
+    earned,
+    progress,
+  };
 }
 
 /**
- * Badge rules. Each badge only appears when the backend lists the measurement it depends on,
- * so nothing here breaks if the measurement list changes.
+ * Turns the backend's badge answer into the list the screens show: earned badges first, then the
+ * rest with their progress. The backend decides what is earned; nothing is worked out here.
  */
-export function computeBadges(
-  measurements: Record<string, Measurement | undefined>,
-  histories: Histories,
-  risks: ScoredRisk[],
-  now = Date.now(),
-): Badge[] {
-  const has = (id: string) => measurements[id] !== undefined;
-  const count = (id: string) => (histories[id] ?? []).length;
-  const anyLogged = Object.values(histories).some((h) => (h ?? []).length > 0);
-  const scored = risks.filter((r) => r.zone !== 'none');
-  const badges: Badge[] = [
-    { id: 'first-check-in', name: 'First Check-in', how: 'Log any measurement.', earned: anyLogged },
-    { id: 'week-streak', name: 'Week Streak', how: 'Check in 7 days in a row.', earned: checkInStreak(histories, now) >= 7 },
-  ];
-  if (has('intraocular_pressure') && has('oct_fundus_scan'))
-    badges.push({ id: 'eagle-eye', name: 'Eagle Eye', how: 'Log both an eye pressure reading and an eye scan.', earned: count('intraocular_pressure') > 0 && count('oct_fundus_scan') > 0 });
-  if (has('sleep_duration'))
-    badges.push({ id: 'deep-sleeper', name: 'Deep Sleeper', how: 'Two sleep logs in a row in the healthy range.', earned: lastGreen(measurements.sleep_duration, histories.sleep_duration, 2) });
-  if (has('balance_score_change'))
-    badges.push({ id: 'steady-horizon', name: 'Steady Horizon', how: 'Three balance checks in a row in the healthy range.', earned: lastGreen(measurements.balance_score_change, histories.balance_score_change, 3) });
-  if (has('grip_strength_change'))
-    badges.push({ id: 'strong-grip', name: 'Strong Grip', how: 'Three grip checks in a row in the healthy range.', earned: lastGreen(measurements.grip_strength_change, histories.grip_strength_change, 3) });
-  if (has('mood_score'))
-    badges.push({ id: 'mind-zen', name: 'Mind Zen', how: 'Log your mood 7 days in a row.', earned: dayRun(loggedDays(histories.mood_score), now) >= 7 });
-  if (has('solar_proton_flux'))
-    badges.push({ id: 'storm-watch', name: 'Storm Watch', how: 'Check solar proton flux 5 times.', earned: count('solar_proton_flux') >= 5 });
-  badges.push({ id: 'all-green', name: 'All Green', how: 'Every risk with readings in the healthy zone.', earned: scored.length >= 3 && scored.every((r) => r.zone === 'green') });
-  return badges;
+export function badgesFromServer(set: BadgeSet | undefined, measurements: Record<string, Measurement | undefined>): Badge[] {
+  if (!set) return [];
+  const earned = (set.earned ?? []).filter((rule) => rule && typeof rule.title === 'string').map((rule) => toBadge(rule, true, 1, measurements));
+  const unearned = (set.unearned ?? [])
+    .filter((status) => status?.badge && typeof status.badge.title === 'string')
+    .map((status) => {
+      const parts = Array.isArray(status.progress) ? status.progress.filter((p) => Number.isFinite(p)) : [];
+      const mean = parts.length ? parts.reduce((a, b) => a + Math.min(1, Math.max(0, b)), 0) / parts.length : 0;
+      return toBadge(status.badge, false, mean, measurements);
+    });
+  return [...earned, ...unearned];
 }
 
 const BADGE_KEY = 'chm.badges';

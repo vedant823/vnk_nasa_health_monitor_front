@@ -6,7 +6,8 @@ import { AxiosError, type AxiosAdapter, type AxiosResponse, type InternalAxiosRe
 import riskInfo from '../mocks/riskInfo.json';
 import details from '../mocks/measurementDetails.json';
 import instructions from '../mocks/measurementInstructions.json';
-import type { BaselineMode, Measurement, MeasurementSet, Reminder, RiskEvaluation, RiskFactor } from './types';
+import badgeFile from '../mocks/badges.json';
+import type { BadgeCriterion, BadgeRule, BadgeSet, BaselineMode, Measurement, MeasurementSet, Reminder, RiskEvaluation, RiskFactor } from './types';
 
 const DAY = 86_400_000;
 const STORE_KEY = 'chm.mock.v1';
@@ -126,6 +127,54 @@ function evaluate(u: MockUser, risk: RiskFactor): RiskEvaluation {
   };
 }
 
+/** Same rules as the backend's BadgeService: progress per criterion, earned when every one reaches 1. */
+function criterionProgress(u: MockUser, c: BadgeCriterion): number {
+  const times: number[] = [];
+  for (const id of c.measurementType) {
+    const m = measurementById.get(id);
+    if (!m) continue;
+    for (const set of u.history[id] ?? []) {
+      if (c.isOk) {
+        if (m.category === 'visual') continue;
+        const value = adjusted(u, m, set);
+        const green =
+          !(m.dangerousLow !== null && value < m.dangerousLow) &&
+          !(m.abnormalLow !== null && value < m.abnormalLow) &&
+          !(m.abnormalHigh !== null && value > m.abnormalHigh) &&
+          !(m.dangerousHigh !== null && value > m.dangerousHigh);
+        if (!green) continue;
+      }
+      times.push(Date.parse(set.timestamp));
+    }
+  }
+  let achieved = times.length;
+  if (c.streak || c.distinctDays) {
+    // UTC calendar days, each counted once.
+    const days = [...new Set(times.map((t) => Math.floor(t / DAY)))].sort((a, b) => a - b);
+    achieved = days.length;
+    if (c.streak) {
+      let best = 0;
+      let run = 0;
+      days.forEach((day, i) => {
+        run = i > 0 && day === days[i - 1] + 1 ? run + 1 : 1;
+        best = Math.max(best, run);
+      });
+      achieved = best;
+    }
+  }
+  return Math.min(1, achieved / c.count);
+}
+
+function evaluateBadges(u: MockUser): BadgeSet {
+  const set: BadgeSet = { earned: [], unearned: [] };
+  for (const badge of (badgeFile as { badges: BadgeRule[] }).badges) {
+    const progress = badge.criteria.map((c) => criterionProgress(u, c));
+    if (progress.every((p) => p >= 1)) set.earned.push(badge);
+    else set.unearned.push({ badge, progress });
+  }
+  return set;
+}
+
 function upcoming(u: MockUser, withinDays: number): Reminder[] {
   const now = Date.now();
   const horizon = now + withinDays * DAY;
@@ -222,6 +271,7 @@ function route(method: string, path: string, body: Record<string, unknown>, para
       if (!risk) throw new HttpError(404, 'Unknown risk');
       return evaluate(u, risk);
     }
+    if (seg[1] === 'badges') return evaluateBadges(u);
     if (seg[1] === 'upcoming') return upcoming(u, Number(params.withinDays ?? 30));
     if (seg[1] === 'digest') {
       const monthly = upcoming(u, 30);
@@ -263,6 +313,23 @@ function route(method: string, path: string, body: Record<string, unknown>, para
           images = [body.image];
         }
         (u.history[m.id] ??= []).push({ timestamp: new Date().toISOString(), values, images });
+        save();
+        return '';
+      }
+      if (method === 'delete') {
+        // Same rules as the backend: index counts from the newest reading; the baseline reading
+        // (the first one) can only go when it is the last reading left.
+        if (!history.length) throw new HttpError(404, `No readings logged for ${m.id}`);
+        const index = params.measurementIndex === undefined ? 0 : Number(params.measurementIndex);
+        if (!Number.isInteger(index) || index < 0 || index >= history.length) throw new HttpError(404, 'Invalid measurement index');
+        const position = history.length - 1 - index;
+        const baselineRelative = m.category === 'numerical' && !!m.baselineMode && m.baselineMode !== 'none';
+        if (baselineRelative && position === 0) {
+          if (history.length > 1) throw new HttpError(400, 'The baseline reading cannot be deleted while other readings exist');
+          delete u.baselines[m.id];
+        }
+        history.splice(position, 1);
+        if (!history.length) delete u.history[m.id];
         save();
         return '';
       }

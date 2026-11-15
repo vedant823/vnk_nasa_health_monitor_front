@@ -1,6 +1,7 @@
 // AI-generated code (Claude by Anthropic), reviewed by team VNK. See AI_DISCLOSURE.md.
 // Measurement overview: chart (or image history) with a plain trend sentence, why the exam matters,
-// reminder frequency, and a button to take the measurement.
+// reminder frequency, a log of saved readings that can be deleted, and a button to take the measurement.
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import type { Measurement, MeasurementSet, TrendDirection } from '../api/types';
 import { errorMessage } from '../api/client';
@@ -10,7 +11,7 @@ import { TrendChart } from '../components/measurement/TrendChart';
 import { ZoneChip } from '../components/status/Status';
 import { measurementExplainer } from '../content/explainers';
 import { displayUnit, formatValue, usesBaseline } from '../content/inputSpecs';
-import { useHistory, useMeasurement, useSetFrequency, useTrend, useUpcoming } from '../hooks/queries';
+import { useDeleteMeasurement, useHistory, useMeasurement, useSetFrequency, useTrend, useUpcoming } from '../hooks/queries';
 import { DAY, describeDue, formatDateTime, toMillis } from '../lib/dates';
 import { ZONE_LABEL, classify, latestSet, setValue, sortOldestFirst } from '../lib/zones';
 
@@ -29,6 +30,96 @@ function trendSentence(m: Measurement, history: MeasurementSet[], direction: Tre
   const towardHealthy = zone === 'green' ? null : (side === 'low') === (direction === 'up');
   const tail = towardHealthy === null ? '' : towardHealthy ? ' That is moving back toward healthy.' : ' That is moving further from healthy.';
   return `${base} It went ${direction} since the reading before.${tail}`;
+}
+
+/**
+ * Saved readings, newest first, each with a delete button. The backend deletes by position in the
+ * newest-first list it serves, so the index sent is the reading's place in that same list.
+ * For measurements compared with a baseline, the first reading is the baseline and the backend
+ * refuses to delete it while later readings exist, so its button is switched off with a reason.
+ */
+function ReadingLog({ measurement: m, sets }: { measurement: Measurement; sets: MeasurementSet[] }) {
+  const remove = useDeleteMeasurement(m.id);
+  const [confirming, setConfirming] = useState<number | null>(null);
+  const [removed, setRemoved] = useState(false);
+  if (sets.length === 0) return null;
+  const baselineIndex = usesBaseline(m) ? sets.length - 1 : -1;
+  return (
+    <section className="card" aria-label="Saved readings">
+      <div className="section-head">
+        <h2>Saved readings</h2>
+        <span className="muted small">{sets.length} saved, newest first</span>
+      </div>
+      <p className="muted small">Logged something by mistake? Delete it here. Your scores, trend and reminders update right away.</p>
+      <ul className="reading-log">
+        {sets.map((set, index) => {
+          const value = setValue(set);
+          const scored = m.category === 'numerical' && value !== null;
+          const isBaseline = index === baselineIndex;
+          const locked = isBaseline && sets.length > 1;
+          return (
+            <li key={`${set.timestamp}-${index}`}>
+              <span className="reading-when">
+                {formatDateTime(toMillis(set.timestamp))}
+                {isBaseline && <span className="chip">Baseline</span>}
+              </span>
+              {scored ? (
+                <span className="reading-value">
+                  <span className="num">{formatValue(value)}</span> <span className="muted small">{displayUnit(m)}</span>
+                </span>
+              ) : (
+                <span className="reading-value muted">Image</span>
+              )}
+              {scored ? <ZoneChip zone={classify(value, m).zone} /> : <span />}
+              {confirming === index ? (
+                <span className="reading-actions">
+                  <button
+                    type="button"
+                    className="btn btn-danger"
+                    disabled={remove.isPending}
+                    onClick={() =>
+                      remove.mutate(index, {
+                        onSuccess: () => setRemoved(true),
+                        onSettled: () => setConfirming(null),
+                      })
+                    }
+                  >
+                    {remove.isPending ? 'Deleting…' : 'Yes, delete'}
+                  </button>
+                  <button type="button" className="btn btn-text" disabled={remove.isPending} onClick={() => setConfirming(null)}>
+                    Keep
+                  </button>
+                </span>
+              ) : (
+                <span className="reading-actions">
+                  <button
+                    type="button"
+                    className="btn btn-text"
+                    disabled={locked || remove.isPending}
+                    title={locked ? 'This is your baseline. Delete the later readings first.' : undefined}
+                    aria-label={`Delete the reading from ${formatDateTime(toMillis(set.timestamp))}`}
+                    onClick={() => {
+                      setRemoved(false);
+                      remove.reset();
+                      setConfirming(index);
+                    }}
+                  >
+                    Delete
+                  </button>
+                </span>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      {baselineIndex >= 0 && sets.length > 1 && (
+        <p className="muted small">Your first reading is your baseline. Later readings are measured against it, so it can only be deleted once the others are gone.</p>
+      )}
+      {confirming !== null && <p className="note">Deleting a reading cannot be undone. If you delete it by mistake, take the measurement again.</p>}
+      {removed && !remove.isError && <p role="status" className="muted small">Reading deleted.</p>}
+      {remove.isError && <p className="error-text">Could not delete. {errorMessage(remove.error)}</p>}
+    </section>
+  );
 }
 
 export function MeasurementOverviewPage() {
@@ -92,6 +183,8 @@ export function MeasurementOverviewPage() {
         </p>
         {usesBaseline(m) && <p className="muted small">Readings are shown as the change from your first reading, which is your personal baseline.</p>}
       </section>
+
+      <ReadingLog measurement={m} sets={sets} />
 
       <section className="card frequency" aria-label="Reminder frequency">
         <label className="field inline">

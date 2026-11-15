@@ -59,7 +59,7 @@ src/
   content/     plain-language explainers, per-measurement input fields, body-area mapping
   components/  status chips, body figure, trend chart, prompts, gamification, layout
   pages/       Login, Home, Reminders, Risk, Measurement Overview, Measurement Performance, About
-  mocks/       copies of the backend's data files, used only in demo mode
+  mocks/       copies of the backend's data files and of badges.json, used only in demo mode
   styles/      one global stylesheet with design tokens (light and dark)
 ```
 
@@ -72,10 +72,11 @@ instructions and recommendations come from the backend, and every URL is built f
 | Screen | Endpoints |
 | --- | --- |
 | Login | `PUT /users/login` (log in), `POST /users/login` (create account) |
-| Home | `GET /data/risks`, `GET /users/risks`, `GET /users/upcoming`, `GET /data/measurements/{id}`, `GET /users/measurements/{id}` |
+| Home | `GET /users/badges`, `GET /data/risks`, `GET /users/risks`, `GET /users/upcoming`, `GET /data/measurements/{id}`, `GET /users/measurements/{id}` |
 | Reminders | `GET /users/digest`, `GET /users/upcoming` |
 | Risk | `GET /data/risks/{id}`, `GET /users/risks/{id}` |
-| Measurement Overview | `GET /users/measurements/{id}`, `GET /users/measurements/{id}/trend`, `PUT /users/measurements/{id}/frequency` |
+| Measurement Overview | `GET /users/measurements/{id}`, `GET /users/measurements/{id}/trend`, `PUT /users/measurements/{id}/frequency`, `DELETE /users/measurements/{id}?measurementIndex=N` |
+| Result sheet and mood check-in (Undo) | `DELETE /users/measurements/{id}` (removes the most recent reading) |
 | Measurement Performance | `GET /data/measurements/{id}`, `POST /users/measurements/{id}` |
 
 ### What the app adds on top of the spec below
@@ -86,7 +87,12 @@ instructions and recommendations come from the backend, and every URL is built f
   Medical Officer, then the flight surgeon. Red results offer a ready-to-send report.
 - **Prompts:** a banner when a check is due, a dialog for overdue checks (at most every 4 hours),
   and a one-tap daily mood check-in.
+- **Undo and delete:** right after saving, "Undo this entry" removes the reading just logged. The
+  measurement page lists every saved reading with a Delete button. A baseline reading can only be
+  deleted once the later readings are gone, because the backend measures them against it.
 - **Motivation:** mission readiness score, check-in streak, weekly progress bar and badges.
+  Badges come from the backend (`GET /users/badges`), which decides what is earned and reports
+  progress on the rest. `src/mocks/badges.json` is only used by demo mode.
 - **Plain language:** every screen answers "Why is this exam needed?" and "How does spaceflight
   affect this?" without jargon.
 

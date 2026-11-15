@@ -13,9 +13,9 @@ import { BodyFigure } from '../components/risk/BodyFigure';
 import { Icon, ZoneChip } from '../components/status/Status';
 import { BODY_AREA_LABEL, bodyAreaOf, type BodyArea } from '../content/bodyAreas';
 import { GENERAL_EXPLAINER } from '../content/explainers';
-import { useDashboard, type RiskView } from '../hooks/queries';
+import { useBadges, useDashboard, type RiskView } from '../hooks/queries';
 import { DAY, describeDue, toMillis } from '../lib/dates';
-import { checkInStreak, computeBadges, readinessScore, readinessZone, takeNewBadges, weekProgress, type Badge } from '../lib/gamification';
+import { badgesFromServer, checkInStreak, readinessScore, readinessZone, takeNewBadges, weekProgress, type Badge } from '../lib/gamification';
 import { ZONE_RANK, worstZone, type Zone } from '../lib/zones';
 
 type CategoryFilter = 'all' | 'physical' | 'psychological';
@@ -51,14 +51,16 @@ export function HomePage() {
     return Object.fromEntries(Object.entries(byArea).map(([k, zones]) => [k, worstZone(zones)])) as Partial<Record<BodyArea, Zone>>;
   }, [dash.risks]);
 
-  const badges = useMemo(() => computeBadges(dash.measurements, dash.histories, dash.risks), [dash.measurements, dash.histories, dash.risks]);
+  // Badges are evaluated by the backend. If that call fails, the rest of Home still works.
+  const badgeSet = useBadges();
+  const badges = useMemo(() => badgesFromServer(badgeSet.data, dash.measurements), [badgeSet.data, dash.measurements]);
   const earnedKey = badges.filter((b) => b.earned).map((b) => b.id).join(',');
   useEffect(() => {
-    if (dash.isLoading || !username) return;
+    if (dash.isLoading || !badgeSet.data || !username) return;
     const fresh = takeNewBadges(username, badges);
     if (fresh.length) setNewBadges(fresh);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [earnedKey, dash.isLoading, username]);
+  }, [earnedKey, dash.isLoading, badgeSet.data, username]);
 
   if (dash.isLoading) return <Loading />;
   if (dash.error) return <ErrorState error={dash.error} onRetry={dash.refetch} />;
@@ -150,7 +152,7 @@ export function HomePage() {
         </section>
       </div>
 
-      <BadgeShelf badges={badges} />
+      {badges.length > 0 && <BadgeShelf badges={badges} />}
       <WhyPanel why={GENERAL_EXPLAINER.why} space={GENERAL_EXPLAINER.space} whyTitle="Why are these exams needed?" open={false} />
 
       {result && resultMeasurement ? (

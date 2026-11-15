@@ -2,6 +2,7 @@
 // One function per backend endpoint. Ids always come from the backend, never from this file.
 import { api } from './client';
 import type {
+  BadgeSet,
   LogMeasurementRequest,
   Measurement,
   MeasurementSet,
@@ -42,6 +43,8 @@ export const user = {
   getRiskScore: async (riskId: string) => (await api.get<RiskEvaluation>(`/users/risks/${enc(riskId)}`)).data,
   getUpcoming: async (withinDays = 30) =>
     (await api.get<Reminder[]>('/users/upcoming', { params: { withinDays } })).data,
+  /** Earned badges, and unearned ones with progress. The backend evaluates them from the history. */
+  getBadges: async () => (await api.get<BadgeSet>('/users/badges')).data,
   getDigest: async () => (await api.get<ReminderDigest>('/users/digest')).data,
   getHistory: async (measurementId: string) =>
     (await api.get<MeasurementSet[]>(`/users/measurements/${enc(measurementId)}`)).data,
@@ -49,6 +52,16 @@ export const user = {
     (await api.get<MeasurementTrend>(`/users/measurements/${enc(measurementId)}/trend`)).data,
   logMeasurement: async (measurementId: string, body: LogMeasurementRequest) => {
     await api.post(`/users/measurements/${enc(measurementId)}`, body);
+  },
+  /**
+   * DELETE removes one reading. Without an index the backend deletes the most recent one; with an
+   * index it deletes that position in the newest-first list that getHistory returns (0 = newest).
+   * 400 means it is the baseline reading and later readings still depend on it.
+   */
+  deleteMeasurement: async (measurementId: string, measurementIndex?: number) => {
+    await api.delete(`/users/measurements/${enc(measurementId)}`, {
+      params: measurementIndex === undefined ? undefined : { measurementIndex },
+    });
   },
   setFrequency: async (measurementId: string, frequencyDays: number) => {
     await api.put(`/users/measurements/${enc(measurementId)}/frequency`, { frequencyDays });

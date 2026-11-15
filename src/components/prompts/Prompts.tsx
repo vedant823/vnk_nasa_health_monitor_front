@@ -1,12 +1,13 @@
 // AI-generated code (Claude by Anthropic), reviewed by team VNK. See AI_DISCLOSURE.md.
 // Gentle nudges: a banner when something is due, a dialog for overdue checks (at most every 4 hours),
-// a one-tap daily mood check-in, and the result sheet shown after a measurement is saved.
+// a one-tap daily mood check-in, and the result sheet shown after a measurement is saved. The mood
+// check-in and the result sheet both offer Undo, which deletes the reading that was just saved.
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { Measurement, MeasurementSet } from '../../api/types';
 import { errorMessage } from '../../api/client';
 import { displayUnit, formatValue, usesBaseline } from '../../content/inputSpecs';
-import { useLogMeasurement, type RiskView } from '../../hooks/queries';
+import { useDeleteMeasurement, useLogMeasurement, type RiskView } from '../../hooks/queries';
 import { HOUR, dayKey, toMillis } from '../../lib/dates';
 import type { Badge } from '../../lib/gamification';
 import { ZONE_LABEL, classify, latestSet, setValue, type Zone } from '../../lib/zones';
@@ -70,6 +71,7 @@ export function DuePromptDialog({ id, name, overdueText }: { id: string; name: s
 /** Daily "How do you feel today?" tap. Only shown when the backend lists a mood measurement. */
 export function MoodQuickCheck({ measurement, history }: { measurement: Measurement; history: MeasurementSet[] | undefined }) {
   const log = useLogMeasurement(measurement.id);
+  const undo = useDeleteMeasurement(measurement.id);
   const [value, setValue_] = useState(7);
   const [saved, setSaved] = useState(false);
   const latest = latestSet(history);
@@ -78,9 +80,16 @@ export function MoodQuickCheck({ measurement, history }: { measurement: Measurem
   return (
     <section className="card mood" aria-label="Daily mood check-in">
       {saved ? (
-        <p role="status">
-          <Icon name="check" /> Thanks. Your mood for today is logged.
-        </p>
+        <div className="mood-saved">
+          <p role="status">
+            <Icon name="check" /> Thanks. Your mood for today is logged.
+          </p>
+          {/* No index: the backend deletes the most recent reading, which is the one just saved. */}
+          <button type="button" className="btn btn-text" disabled={undo.isPending} onClick={() => undo.mutate(undefined, { onSuccess: () => setSaved(false) })}>
+            {undo.isPending ? 'Undoing…' : 'Undo'}
+          </button>
+          {undo.isError && <p className="error-text">{errorMessage(undo.error)}</p>}
+        </div>
       ) : (
         <>
           <div>
@@ -115,6 +124,9 @@ interface ResultProps {
 /** Shown on Home right after a measurement is saved. */
 export function ResultSheet({ measurement, history, risks, newBadges, nextUp, onClose }: ResultProps) {
   const [emergency, setEmergency] = useState(false);
+  const undo = useDeleteMeasurement(measurement.id);
+  // Once Undo is pressed the sheet stops showing the reading, so an older one never flashes up.
+  const undoing = undo.isPending || undo.isSuccess;
   const latest = latestSet(history);
   const value = latest ? setValue(latest) : null;
   const isVisual = measurement.category === 'visual';
@@ -122,6 +134,17 @@ export function ResultSheet({ measurement, history, risks, newBadges, nextUp, on
   const zone: Zone = emergency ? 'emergency' : (result?.zone ?? 'none');
   const advice = result?.side === 'low' ? measurement.lowRecommendation : result?.side === 'high' ? measurement.highRecommendation : null;
   const firstBaseline = usesBaseline(measurement) && (history?.length ?? 0) === 1;
+
+  if (undoing)
+    return (
+      <div className="scrim" role="dialog" aria-modal="true" aria-labelledby="result-title">
+        <div className="dialog result zone-none">
+          <span className="eyebrow">Undo</span>
+          <h2 id="result-title">{measurement.name}</h2>
+          <p role="status">Removing the reading you just saved…</p>
+        </div>
+      </div>
+    );
 
   return (
     <div className="scrim" role="dialog" aria-modal="true" aria-labelledby="result-title">
@@ -175,7 +198,13 @@ export function ResultSheet({ measurement, history, risks, newBadges, nextUp, on
           <button type="button" className="btn btn-filled" onClick={onClose}>
             {zone === 'green' || zone === 'none' ? 'Done' : `Got it (${ZONE_LABEL[zone].toLowerCase()})`}
           </button>
+          {/* No index: the backend deletes the most recent reading, which is the one just saved. */}
+          <button type="button" className="btn btn-text" onClick={() => undo.mutate(undefined, { onSuccess: onClose })}>
+            Undo this entry
+          </button>
         </div>
+        {undo.isError && <p className="error-text">Could not undo. {errorMessage(undo.error)}</p>}
+        <p className="muted small">Made a mistake? Undo removes this reading. You can also delete older readings on the measurement's page.</p>
       </div>
     </div>
   );
