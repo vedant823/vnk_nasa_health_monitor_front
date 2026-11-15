@@ -71,6 +71,18 @@ export const user = {
 export const data = {
   getRisks: async () => (await api.get<RiskFactor[]>('/data/risks')).data,
   getRisk: async (riskId: string) => (await api.get<RiskFactor>(`/data/risks/${enc(riskId)}`)).data,
-  getMeasurement: async (measurementId: string) =>
-    (await api.get<Measurement>(`/data/measurements/${enc(measurementId)}`)).data,
+  getMeasurement: async (measurementId: string): Promise<Measurement> => {
+    const m = (await api.get<Measurement>(`/data/measurements/${enc(measurementId)}`)).data;
+    // Works with both backend formats: one set of limits, or a "ranges" list per situation. With the
+    // list, the station entry fills the single limits; lib/environment then picks the crew member's own.
+    const station = m.ranges?.find((range) => range.situation === 'station') ?? m.ranges?.[0];
+    return {
+      ...m,
+      dangerousLow: m.dangerousLow ?? station?.dangerousLow ?? null,
+      abnormalLow: m.abnormalLow ?? station?.abnormalLow ?? null,
+      abnormalHigh: m.abnormalHigh ?? station?.abnormalHigh ?? null,
+      dangerousHigh: m.dangerousHigh ?? station?.dangerousHigh ?? null,
+      instructions: m.instructions ?? [],
+    };
+  },
 };

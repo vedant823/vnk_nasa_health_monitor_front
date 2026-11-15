@@ -2,9 +2,11 @@
 // Measurement overview: chart (or image history) with a plain trend sentence, why the exam matters,
 // reminder frequency, a log of saved readings that can be deleted, and a button to take the measurement.
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { Measurement, MeasurementSet, TrendDirection } from '../api/types';
-import { errorMessage } from '../api/client';
+import { USERNAME_KEY, errorMessage } from '../api/client';
+import { useEnvironment } from '../auth/EnvironmentContext';
+import { ChangeHistoryCard, ChangeNotice } from '../components/changes/ChangeHistory';
 import { WhyPanel } from '../components/explain/WhyPanel';
 import { ErrorState, Loading, PageHeader } from '../components/layout/AppShell';
 import { TrendChart } from '../components/measurement/TrendChart';
@@ -12,10 +14,31 @@ import { ZoneChip } from '../components/status/Status';
 import { measurementExplainer } from '../content/explainers';
 import { displayUnit, formatValue, usesBaseline } from '../content/inputSpecs';
 import { useDeleteMeasurement, useHistory, useMeasurement, useSetFrequency, useTrend, useUpcoming } from '../hooks/queries';
+import type { ChangeEntry } from '../lib/changeLog';
 import { DAY, describeDue, formatDateTime, toMillis } from '../lib/dates';
+import { environmentNotes } from '../lib/environment';
 import { ZONE_LABEL, classify, latestSet, setValue, sortOldestFirst } from '../lib/zones';
 
 const FREQUENCIES = [1, 2, 3, 7, 14, 30];
+/** The backend reminds every 7 days until a frequency is set. */
+const DEFAULT_FREQUENCY = 7;
+
+const frequencyKey = (measurementId: string) => `chm.frequency.${localStorage.getItem(USERNAME_KEY) ?? ''}.${measurementId}`;
+function loadFrequency(measurementId: string): number | null {
+  try {
+    const days = Number(localStorage.getItem(frequencyKey(measurementId)));
+    return Number.isInteger(days) && days >= 1 ? days : null;
+  } catch {
+    return null;
+  }
+}
+function saveFrequency(measurementId: string, days: number) {
+  try {
+    localStorage.setItem(frequencyKey(measurementId), String(days));
+  } catch {
+    // Storage blocked: the backend still has the new frequency.
+  }
+}
 
 function trendSentence(m: Measurement, history: MeasurementSet[], direction: TrendDirection | null | undefined): string {
   const latest = latestSet(history);
@@ -41,7 +64,8 @@ function trendSentence(m: Measurement, history: MeasurementSet[], direction: Tre
 function ReadingLog({ measurement: m, sets }: { measurement: Measurement; sets: MeasurementSet[] }) {
   const remove = useDeleteMeasurement(m.id);
   const [confirming, setConfirming] = useState<number | null>(null);
-  const [removed, setRemoved] = useState(false);
+  const [removed, setRemoved] = useState<ChangeEntry | null>(null);
+  const navigate = useNavigate();
   if (sets.length === 0) return null;
   const baselineIndex = usesBaseline(m) ? sets.length - 1 : -1;
   return (
@@ -50,7 +74,7 @@ function ReadingLog({ measurement: m, sets }: { measurement: Measurement; sets: 
         <h2>Saved readings</h2>
         <span className="muted small">{sets.length} saved, newest first</span>
       </div>
-      <p className="muted small">Logged something by mistake? Delete it here. Your scores, trend and reminders update right away.</p>
+      <p className="muted small">Logged something by mistake? Edit or delete it here. Your scores, trend and reminders update right away, and the change is written to the change history below.</p>
       <ul className="reading-log">
         {sets.map((set, index) => {
           const value = setValue(set);
@@ -78,8 +102,8 @@ function ReadingLog({ measurement: m, sets }: { measurement: Measurement; sets: 
                     className="btn btn-danger"
                     disabled={remove.isPending}
                     onClick={() =>
-                      remove.mutate(index, {
-                        onSuccess: () => setRemoved(true),
+                      remove.mutate({ index, action: 'delete' }, {
+                        onSuccess: (entry) => setRemoved(entry),
                         onSettled: () => setConfirming(null),
                       })
                     }
@@ -96,10 +120,20 @@ function ReadingLog({ measurement: m, sets }: { measurement: Measurement; sets: 
                     type="button"
                     className="btn btn-text"
                     disabled={locked || remove.isPending}
+                    title={locked ? 'This is your baseline. It can be edited once the later readings are gone.' : undefined}
+                    aria-label={`Edit the reading from ${formatDateTime(toMillis(set.timestamp))}`}
+                    onClick={() => navigate(`/measurements/${encodeURIComponent(m.id)}/perform?edit=${index}`)}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-text"
+                    disabled={locked || remove.isPending}
                     title={locked ? 'This is your baseline. Delete the later readings first.' : undefined}
                     aria-label={`Delete the reading from ${formatDateTime(toMillis(set.timestamp))}`}
                     onClick={() => {
-                      setRemoved(false);
+                      setRemoved(null);
                       remove.reset();
                       setConfirming(index);
                     }}
@@ -113,10 +147,10 @@ function ReadingLog({ measurement: m, sets }: { measurement: Measurement; sets: 
         })}
       </ul>
       {baselineIndex >= 0 && sets.length > 1 && (
-        <p className="muted small">Your first reading is your baseline. Later readings are measured against it, so it can only be deleted once the others are gone.</p>
+        <p className="muted small">Your first reading is your baseline. Later readings are measured against it, so it can only be edited or deleted once the others are gone.</p>
       )}
       {confirming !== null && <p className="note">Deleting a reading cannot be undone. If you delete it by mistake, take the measurement again.</p>}
-      {removed && !remove.isError && <p role="status" className="muted small">Reading deleted.</p>}
+      {removed && !remove.isError && <ChangeNotice entry={removed} onDismiss={() => setRemoved(null)} />}
       {remove.isError && <p className="error-text">Could not delete. {errorMessage(remove.error)}</p>}
     </section>
   );
@@ -129,6 +163,9 @@ export function MeasurementOverviewPage() {
   const trend = useTrend(measurementId);
   const upcoming = useUpcoming(60);
   const setFrequency = useSetFrequency(measurementId);
+  const { environment } = useEnvironment();
+  // The choice is remembered on this device, because the backend has no call that returns it.
+  const [chosenFrequency, setChosenFrequency] = useState<number | null>(() => loadFrequency(measurementId));
 
   if (measurement.isLoading || history.isLoading) return <Loading />;
   if (measurement.error || history.error || !measurement.data)
@@ -142,8 +179,11 @@ export function MeasurementOverviewPage() {
   const zone = value !== null && m.category === 'numerical' ? classify(value, m).zone : 'none';
   const due = upcoming.data?.find((r) => r.measurementId === measurementId);
   // The backend has no "get frequency" call, so work it out: next due date minus the latest reading.
-  const currentFrequency = due && latest ? Math.max(1, Math.round((toMillis(due.dueDate) - toMillis(latest.timestamp)) / DAY)) : null;
-  const options = currentFrequency && !FREQUENCIES.includes(currentFrequency) ? [...FREQUENCIES, currentFrequency].sort((a, b) => a - b) : FREQUENCIES;
+  const derivedFrequency = due && latest ? Math.max(1, Math.round((toMillis(due.dueDate) - toMillis(latest.timestamp)) / DAY)) : null;
+  // What the dropdown shows: the value just chosen, else what the reminders imply, else the backend's standard 7 days.
+  const currentFrequency = chosenFrequency ?? derivedFrequency ?? DEFAULT_FREQUENCY;
+  const options = FREQUENCIES.includes(currentFrequency) ? FREQUENCIES : [...FREQUENCIES, currentFrequency].sort((a, b) => a - b);
+  const envNotes = environmentNotes(environment, m.id);
   const images = sortOldestFirst(sets).reverse().flatMap((set) => (set.images ?? []).map((img) => ({ img, t: toMillis(set.timestamp) })));
 
   return (
@@ -184,20 +224,38 @@ export function MeasurementOverviewPage() {
         {usesBaseline(m) && <p className="muted small">Readings are shown as the change from your first reading, which is your personal baseline.</p>}
       </section>
 
+      {envNotes.length > 0 && (
+        <section className="card" aria-label="Advice for your environment">
+          <h2>In your environment: {environment.name}</h2>
+          <ul className="advice-list">
+            {envNotes.map((note) => (
+              <li key={note}>{note}</li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <ReadingLog measurement={m} sets={sets} />
+      <ChangeHistoryCard measurementId={m.id} />
 
       <section className="card frequency" aria-label="Reminder frequency">
         <label className="field inline">
           <span>Remind me every</span>
           <select
-            value={currentFrequency ?? ''}
+            value={currentFrequency}
             disabled={setFrequency.isPending}
             onChange={(e) => {
               const days = Number(e.target.value);
-              if (days >= 1) setFrequency.mutate(days);
+              if (days < 1) return;
+              const previous = chosenFrequency;
+              // Show the new choice at once; go back if the backend refuses it.
+              setChosenFrequency(days);
+              setFrequency.mutate(days, {
+                onSuccess: () => saveFrequency(measurementId, days),
+                onError: () => setChosenFrequency(previous),
+              });
             }}
           >
-            {currentFrequency === null && <option value="">7 days (standard)</option>}
             {options.map((days) => (
               <option key={days} value={days}>
                 {days === 1 ? 'day' : `${days} days`}
@@ -205,8 +263,12 @@ export function MeasurementOverviewPage() {
             ))}
           </select>
         </label>
-        <p className="muted small">
-          {setFrequency.isPending ? 'Saving…' : setFrequency.isSuccess ? 'Saved. Your reminders are updated.' : 'Days between reminders for this measurement.'}
+        <p className={setFrequency.isSuccess ? 'frequency-saved' : 'muted small'} role="status">
+          {setFrequency.isPending
+            ? 'Saving…'
+            : setFrequency.isSuccess
+              ? `Saved. You will now be reminded every ${currentFrequency === 1 ? 'day' : `${currentFrequency} days`}.`
+              : `Currently every ${currentFrequency === 1 ? 'day' : `${currentFrequency} days`}. Change it to set the days between reminders.`}
         </p>
         {setFrequency.isError && <p className="error-text">{errorMessage(setFrequency.error)}</p>}
       </section>

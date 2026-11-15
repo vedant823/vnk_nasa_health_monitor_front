@@ -1,17 +1,19 @@
 // AI-generated code (Claude by Anthropic), reviewed by team VNK. See AI_DISCLOSURE.md.
 // Measurement performance: what you need, step-by-step instructions with pictures, and a fixed bottom
-// bar to enter the reading (or upload an image) and finish, which returns to Home.
+// bar to enter the reading (or upload an image) and finish, which returns to Home. Opened with
+// ?edit=N it corrects reading N of the newest-first history instead of adding a new one.
 import { useState, type FormEvent } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import type { Measurement } from '../api/types';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import type { LogMeasurementRequest, Measurement } from '../api/types';
 import { errorMessage } from '../api/client';
 import { WhyPanel } from '../components/explain/WhyPanel';
 import { ErrorState, Loading, PageHeader } from '../components/layout/AppShell';
 import { InstructionSteps } from '../components/measurement/Parts';
 import { measurementExplainer } from '../content/explainers';
-import { formatValue, inputSpec, usesBaseline } from '../content/inputSpecs';
-import { useHistory, useLogMeasurement, useMeasurement } from '../hooks/queries';
-import { classify } from '../lib/zones';
+import { displayUnit, formatValue, inputSpec, usesBaseline } from '../content/inputSpecs';
+import { useEditMeasurement, useHistory, useLogMeasurement, useMeasurement } from '../hooks/queries';
+import { formatGmt } from '../lib/changeLog';
+import { classify, setValue } from '../lib/zones';
 
 /** Shrinks a photo in the browser (longest side 1600 px, JPEG) and returns plain base64 for the backend. */
 async function imageToBase64(file: File): Promise<string> {
@@ -137,17 +139,55 @@ export function MeasurementPerformPage() {
   const measurement = useMeasurement(measurementId);
   const history = useHistory(measurementId);
   const log = useLogMeasurement(measurementId);
+  const edit = useEditMeasurement(measurementId);
+  const [search] = useSearchParams();
+  const editParam = search.get('edit');
+  const editIndex = editParam !== null && /^\d+$/.test(editParam) ? Number(editParam) : null;
 
-  if (measurement.isLoading) return <Loading />;
+  if (measurement.isLoading || (editIndex !== null && history.isLoading)) return <Loading />;
   if (measurement.error || !measurement.data) return <ErrorState error={measurement.error} onRetry={() => void measurement.refetch()} />;
 
   const m = measurement.data;
   const explainer = measurementExplainer(m);
   const finish = () => navigate('/', { state: { result: { measurementId } } });
+  const sets = history.data ?? [];
+  const editing = editIndex !== null ? sets[editIndex] : undefined;
+  const editingValue = editing ? setValue(editing) : null;
+  // The baseline (oldest reading) cannot be replaced while later readings are measured against it.
+  const editLocked = editIndex !== null && usesBaseline(m) && sets.length > 1 && editIndex === sets.length - 1;
+  const busy = log.isPending || edit.isPending;
+  const save = (body: LogMeasurementRequest) => {
+    if (editIndex !== null && editing)
+      edit.mutate({ index: editIndex, body }, { onSuccess: (change) => navigate('/', { state: { result: { measurementId }, change } }) });
+    else log.mutate(body, { onSuccess: finish });
+  };
+  const failure = log.error ?? edit.error;
 
   return (
     <div className="page narrow has-bottom-bar tall-bar">
-      <PageHeader title={`How to take: ${m.name}`} eyebrow={explainer.plainName ?? 'Measurement'} back={{ to: `/measurements/${encodeURIComponent(measurementId)}`, label: 'Overview' }} />
+      <PageHeader title={editIndex !== null ? `Edit a reading: ${m.name}` : `How to take: ${m.name}`} eyebrow={explainer.plainName ?? 'Measurement'} back={{ to: `/measurements/${encodeURIComponent(measurementId)}`, label: 'Overview' }} />
+
+      {editIndex !== null && (
+        <section className="card" aria-label="Reading being edited">
+          {editing && !editLocked ? (
+            <>
+              <h2>You are correcting a saved reading</h2>
+              <p>
+                Reading taken <strong className="num">{formatGmt(editing.timestamp)}</strong>:{' '}
+                <strong>{editingValue === null ? 'a saved image' : `${formatValue(editingValue)} ${displayUnit(m)}`}</strong>.
+              </p>
+              <p className="muted small">
+                Enter the correct reading below. Saving replaces the old reading, and the change is written to the change history with the time in GMT. The
+                corrected reading is stored with the current time, because the health system stamps every reading when it is saved.
+              </p>
+            </>
+          ) : (
+            <p className="error-text" role="alert">
+              {editLocked ? 'This is your baseline reading. It can only be edited once the later readings are deleted.' : 'That reading could not be found. Go back and choose it again.'}
+            </p>
+          )}
+        </section>
+      )}
 
       {explainer.need && (
         <section className="card" aria-label="What you need">
@@ -169,14 +209,17 @@ export function MeasurementPerformPage() {
 
       <div className="bottom-bar">
         <div className="bottom-bar-inner">
-          {m.category === 'visual' ? (
-            <ImageEntry busy={log.isPending} onSubmit={(image) => log.mutate({ image }, { onSuccess: finish })} />
+          {editIndex !== null && (!editing || editLocked) ? (
+            <p className="muted">Nothing to edit here.</p>
+          ) : m.category === 'visual' ? (
+            <ImageEntry busy={busy} onSubmit={(image) => save({ image })} />
           ) : (
-            <NumericEntry m={m} hasHistory={(history.data ?? []).length > 0} busy={log.isPending} onSubmit={(values) => log.mutate({ values }, { onSuccess: finish })} />
+            <NumericEntry m={m} hasHistory={sets.length > 0 && !(editing && sets.length === 1)} busy={busy} onSubmit={(values) => save({ values })} />
           )}
-          {log.isError && (
+          {failure != null && (
             <p className="error-text" role="alert">
-              {errorMessage(log.error)}
+              {edit.isError ? 'The edit did not finish. Check the saved readings on the measurement page. ' : ''}
+              {errorMessage(failure)}
             </p>
           )}
         </div>

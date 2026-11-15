@@ -2,6 +2,8 @@
 // Small status pieces: icons, zone chip, score ring, AI watermark, escalation card.
 // The icons are original line drawings written as code; they are not based on any agency branding.
 import { useState, type ReactNode } from 'react';
+import { useEnvironment } from '../../auth/EnvironmentContext';
+import { flightSurgeonNote } from '../../lib/environment';
 import { ESCALATION, RED_FLAGS } from '../../lib/escalation';
 import { ZONE_LABEL, type Zone } from '../../lib/zones';
 
@@ -71,6 +73,7 @@ export function AiMark() {
 export function EscalationCard({ zone, report }: { zone: Zone; report?: string }) {
   const [showReport, setShowReport] = useState(false);
   const [copied, setCopied] = useState(false);
+  const { environment } = useEnvironment();
   const plan = ESCALATION[zone];
   if (!plan) return null;
   return (
@@ -84,11 +87,20 @@ export function EscalationCard({ zone, report }: { zone: Zone; report?: string }
             <span className="step-num">{i + 1}</span>
             <div>
               <strong>{step.who}</strong>
-              <p>{step.what}</p>
+              <p>
+                {step.what}
+                {/* How fast Earth can answer depends on where the crew is. */}
+                {step.who === 'Flight surgeon' && ` ${flightSurgeonNote(environment)}`}
+              </p>
             </div>
           </li>
         ))}
       </ol>
+      {zone !== 'yellow' && (
+        <p className="small">
+          <strong>{environment.name}:</strong> {environment.care}
+        </p>
+      )}
       {report && zone !== 'yellow' && (
         <>
           <button type="button" className="btn btn-outline" onClick={() => setShowReport((v) => !v)}>

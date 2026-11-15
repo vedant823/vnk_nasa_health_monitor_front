@@ -4,7 +4,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
-import { WhyPanel } from '../components/explain/WhyPanel';
+import { useEnvironment } from '../auth/EnvironmentContext';
+import { ChangeNotice } from '../components/changes/ChangeHistory';
 import { BadgeShelf, HomeStrip } from '../components/gamification/Gamification';
 import { ErrorState, Loading } from '../components/layout/AppShell';
 import { MeasurementRow } from '../components/measurement/Parts';
@@ -12,8 +13,8 @@ import { CheckInBanner, DuePromptDialog, MoodQuickCheck, ResultSheet } from '../
 import { BodyFigure } from '../components/risk/BodyFigure';
 import { Icon, ZoneChip } from '../components/status/Status';
 import { BODY_AREA_LABEL, bodyAreaOf, type BodyArea } from '../content/bodyAreas';
-import { GENERAL_EXPLAINER } from '../content/explainers';
 import { useBadges, useDashboard, type RiskView } from '../hooks/queries';
+import type { ChangeEntry } from '../lib/changeLog';
 import { DAY, describeDue, toMillis } from '../lib/dates';
 import { badgesFromServer, checkInStreak, readinessScore, readinessZone, takeNewBadges, weekProgress, type Badge } from '../lib/gamification';
 import { ZONE_RANK, worstZone, type Zone } from '../lib/zones';
@@ -43,7 +44,10 @@ export function HomePage() {
   const [area, setArea] = useState<BodyArea | null>(null);
   const [newBadges, setNewBadges] = useState<Badge[]>([]);
 
-  const result = (location.state as { result?: { measurementId: string } } | null)?.result;
+  const { environment } = useEnvironment();
+  const navState = location.state as { result?: { measurementId: string }; change?: ChangeEntry } | null;
+  const result = navState?.result;
+  const change = navState?.change;
 
   const areaZones = useMemo(() => {
     const byArea: Partial<Record<BodyArea, Zone[]>> = {};
@@ -84,6 +88,14 @@ export function HomePage() {
       <div className="page-header">
         <span className="eyebrow">Home</span>
         <h1>{username ? `Welcome back, ${username}` : 'Welcome back'}</h1>
+        <div className="chips">
+          <Link to="/profile" className="chip">
+            Environment: {environment.name}
+          </Link>
+          <Link to="/summary" className="chip">
+            Crew Medical Officer summary <Icon name="chevron" size={14} />
+          </Link>
+        </div>
       </div>
 
       <HomeStrip
@@ -153,7 +165,6 @@ export function HomePage() {
       </div>
 
       {badges.length > 0 && <BadgeShelf badges={badges} />}
-      <WhyPanel why={GENERAL_EXPLAINER.why} space={GENERAL_EXPLAINER.space} whyTitle="Why are these exams needed?" open={false} />
 
       {result && resultMeasurement ? (
         <ResultSheet
@@ -162,6 +173,11 @@ export function HomePage() {
           risks={dash.risks.filter((r) => r.factor.measurementIds.includes(result.measurementId))}
           newBadges={newBadges}
           nextUp={nextReminder ? `${nameOf(nextReminder.measurementId)}, ${describeDue(toMillis(nextReminder.dueDate)).text.toLowerCase()}` : undefined}
+          change={change}
+          onUndone={(entry) => {
+            setNewBadges([]);
+            navigate('/', { replace: true, state: { change: entry } });
+          }}
           onClose={() => {
             setNewBadges([]);
             navigate('/', { replace: true, state: null });
@@ -169,6 +185,7 @@ export function HomePage() {
         />
       ) : (
         <>
+          {change && <ChangeNotice entry={change} onDismiss={() => navigate('/', { replace: true, state: null })} />}
           {newBadges.length > 0 && (
             <div className="toast" role="status">
               <Icon name="badge" /> New badge earned: <strong>{newBadges.map((b) => b.name).join(', ')}</strong>

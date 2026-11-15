@@ -6,6 +6,7 @@ import { useParams } from 'react-router-dom';
 import { useQueries } from '@tanstack/react-query';
 import { user } from '../api/endpoints';
 import { useAuth } from '../auth/AuthContext';
+import { useEnvironment } from '../auth/EnvironmentContext';
 import { WhyPanel } from '../components/explain/WhyPanel';
 import { ErrorState, Loading, PageHeader } from '../components/layout/AppShell';
 import { MeasurementRow } from '../components/measurement/Parts';
@@ -15,12 +16,15 @@ import { BODY_AREA_LABEL, bodyAreaOf } from '../content/bodyAreas';
 import { riskSpaceEffect } from '../content/explainers';
 import { displayUnit, formatValue, tidyNumbers } from '../content/inputSpecs';
 import { useDashboard, useRiskFactor, useRiskScore } from '../hooks/queries';
+import { formatGmt } from '../lib/changeLog';
 import { formatDateTime, toMillis } from '../lib/dates';
+import { commDelayText, environmentNotes } from '../lib/environment';
 import { ZONE_LABEL, ZONE_RANK, latestSet, scoreZone, setValue, type Zone } from '../lib/zones';
 
 export function RiskPage() {
   const { riskId = '' } = useParams();
   const { username } = useAuth();
+  const { environment } = useEnvironment();
   const factor = useRiskFactor(riskId);
   const evaluation = useRiskScore(riskId);
   const dash = useDashboard();
@@ -49,9 +53,11 @@ export function RiskPage() {
       return rank || (dueById.get(a.id) ?? Infinity) - (dueById.get(b.id) ?? Infinity);
     });
 
+  const envNotes = [...new Set(ids.flatMap((id) => environmentNotes(environment, id)))];
   const report = [
     'FLIGHT SURGEON REPORT (prepared by the crew member in Crew Health Monitor)',
-    `Crew member: ${username || 'unknown'}    Prepared: ${formatDateTime(Date.now())}`,
+    `Crew member: ${username || 'unknown'}    Prepared: ${formatGmt(Date.now())}`,
+    `Environment: ${environment.name}    Message delay to Earth: ${commDelayText(environment)}    ${environment.care}`,
     `Risk: ${risk.name} (${risk.category})    Score: ${score} of 100 (${ZONE_LABEL[zone]})`,
     `Why the score: ${tidyNumbers(evaluation.data.reason)}`,
     'Latest readings:',
@@ -65,6 +71,7 @@ export function RiskPage() {
     }),
     'Recommendations shown to the crew member:',
     ...evaluation.data.advice.map((a) => `- ${a}`),
+    ...envNotes.map((a) => `- (${environment.name}) ${a}`),
     emergency ? 'Crew member reports a red-flag symptom. EMERGENCY.' : '',
   ]
     .filter(Boolean)
@@ -111,6 +118,16 @@ export function RiskPage() {
               <li key={a}>{a}</li>
             ))}
           </ul>
+          {envNotes.length > 0 && (
+            <div className="note">
+              <strong>Because you are in: {environment.name}</strong>
+              <ul className="advice-list">
+                {envNotes.map((note) => (
+                  <li key={note}>{note}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </section>
       )}
 

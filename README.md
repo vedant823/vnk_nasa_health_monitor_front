@@ -8,11 +8,11 @@ This is the React front end. It talks to the team's Spring backend
 risks need attention, follow simple step-by-step instructions for each health check, log the
 result, and see what to do next.
 
-> **AI disclosure.** The source code, the body illustration, the step placeholder drawings and
+> **AI disclosure.** The source code, the body illustration, the drawing for every measurement step and
 > the plain-language help text in this repository were generated with an AI assistant (Claude by
 > Anthropic) and reviewed by team VNK. Every AI-made image carries a visible "AI-generated"
 > watermark. Nothing here uses, contains or modifies NASA branding or design elements. Details
-> are in [AI_DISCLOSURE.md](AI_DISCLOSURE.md) and on the app's About page.
+> are in [AI_DISCLOSURE.md](AI_DISCLOSURE.md) and on the app's Info page.
 
 ## Run it
 
@@ -53,12 +53,16 @@ readings. A bar at the top of every screen says that the data is simulated.
 ```
 src/
   api/         axios client, one function per backend endpoint, response types, demo-mode adapter
-  auth/        login state; the token is stored at login and sent on every /users request
+  auth/        login state (the token is stored at login and sent on every /users request) and
+               the mission environment choice
   hooks/       data hooks (TanStack Query), including the joined dashboard view
-  lib/         zones and thresholds, dates, streak/readiness/badges, escalation ladder
+  lib/         zones and thresholds, dates, streak/readiness/badges, escalation ladder,
+               mission environments, change history
   content/     plain-language explainers, per-measurement input fields, body-area mapping
-  components/  status chips, body figure, trend chart, prompts, gamification, layout
-  pages/       Login, Home, Reminders, Risk, Measurement Overview, Measurement Performance, About
+  components/  status chips, body figure, step drawings, trend chart, prompts, change history,
+               gamification, layout
+  pages/       Login, Home, Reminders, Risk, Measurement Overview, Measurement Performance,
+               Summary (Crew Medical Officer), Profile, Info
   mocks/       copies of the backend's data files and of badges.json, used only in demo mode
   styles/      one global stylesheet with design tokens (light and dark)
 ```
@@ -78,6 +82,9 @@ instructions and recommendations come from the backend, and every URL is built f
 | Measurement Overview | `GET /users/measurements/{id}`, `GET /users/measurements/{id}/trend`, `PUT /users/measurements/{id}/frequency`, `DELETE /users/measurements/{id}?measurementIndex=N` |
 | Result sheet and mood check-in (Undo) | `DELETE /users/measurements/{id}` (removes the most recent reading) |
 | Measurement Performance | `GET /data/measurements/{id}`, `POST /users/measurements/{id}` |
+| Edit a reading | `POST /users/measurements/{id}` (the corrected reading), then `DELETE /users/measurements/{id}?measurementIndex=N` (the old one) |
+| Summary | The same endpoints as Home |
+| Profile, Info | None (see "Kept in the browser" below) |
 
 ### What the app adds on top of the spec below
 
@@ -90,17 +97,55 @@ instructions and recommendations come from the backend, and every URL is built f
 - **Undo and delete:** right after saving, "Undo this entry" removes the reading just logged. The
   measurement page lists every saved reading with a Delete button. A baseline reading can only be
   deleted once the later readings are gone, because the backend measures them against it.
+- **Edit a reading:** the Edit button next to a saved reading opens the entry form again. Saving
+  stores the corrected reading and removes the old one in one step.
+- **Change history:** every edit, undo and delete shows when it happened (GMT) and what changed
+  from what. The full list is on the measurement page, the Profile page and the Summary page.
+- **Mission environment:** a new account must pick one of five environments (spacecraft in
+  transit, space station, pressurized rover, Moon base, Mars base). It can be changed on the
+  Profile page. The environment changes the advice, the message delay shown for the flight
+  surgeon step, the evacuation note, and any healthy ranges that differ (see below).
+- **Crew Medical Officer summary:** one page with red flags, every risk, the latest reading of
+  every measurement (GMT) and recent changes. It can be printed.
+- **Profile page:** account facts, the environment setting and the change history.
+- **Info page:** how the app works, why the exams are needed, the environments, and the AI
+  disclosure.
 - **Motivation:** mission readiness score, check-in streak, weekly progress bar and badges.
   Badges come from the backend (`GET /users/badges`), which decides what is earned and reports
   progress on the rest. `src/mocks/badges.json` is only used by demo mode.
 - **Plain language:** every screen answers "Why is this exam needed?" and "How does spaceflight
   affect this?" without jargon.
 
+### Kept in the browser, because the backend has no place for it
+
+The backend is not changed by this front end. Three things it does not store are kept in the
+browser's local storage, per account, so they do not follow the account to another device:
+
+- the mission environment (`chm.environment.<username>`),
+- the change history (`chm.changes.<username>`, newest 300 entries),
+- the reminder frequency last chosen (`chm.frequency.<username>.<measurementId>`), because the
+  backend has no endpoint to read the current frequency back.
+
+An edited reading gets the time of the edit as its timestamp, because the backend stamps every
+reading itself. The first (baseline) reading of a baseline measurement can only be edited or
+deleted when it is the only reading.
+
+### Ranges by environment
+
+If the backend sends a `ranges` list for a measurement (one entry per situation: `spacecraft`,
+`station`, `rover`, `moon`, `mars`), the app uses the entry for the chosen environment. If it
+sends one set of limits, that set is used. The team's ranges guide gives the same limits in all
+five environments for the 15 measurements the backend tracks today. The four ranges that do
+differ (blood oxygen, solar storm dose, daily exercise time, dust irritation) are not tracked by
+the backend yet, so they are shown on the Profile and Info pages and used in the advice text.
+Risk scores are worked out by the backend and do not depend on the environment.
+
 ### Instruction images
 
-The backend's instructions name image files that do not exist yet. Until real ones are added,
-each step shows a simple drawn placeholder with an "AI-generated" watermark. See
-[public/images/README.md](public/images/README.md) for where to put real images.
+Every instruction step has its own drawing (`src/components/measurement/StepArt.tsx`), with
+"AI-generated" drawn into the picture. If a real image file is added at the path the backend
+names, it is shown instead, with an "AI-generated" label on top. See
+[public/images/README.md](public/images/README.md) for where to put image files.
 
 ## Testing status
 

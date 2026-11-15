@@ -9,8 +9,9 @@ public/images/<measurementId>/step<N>.png
 For example `public/images/sleep_duration/step1.png`. If the backend's instructions give an
 image path for a step, that path is used instead (relative to `public/`).
 
-When an image is missing, the app shows a simple drawn placeholder with an "AI-generated"
-watermark, so nothing breaks.
+When an image file is missing, the app shows its own drawing for that step
+(`src/components/measurement/StepArt.tsx`), which has "AI-generated" drawn into the picture. An
+image file placed here is shown instead, with an "AI-generated" label on top of it.
 
 Rules for anything placed here:
 

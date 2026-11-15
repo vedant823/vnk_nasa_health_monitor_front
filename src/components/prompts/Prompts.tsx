@@ -6,6 +6,10 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { Measurement, MeasurementSet } from '../../api/types';
 import { errorMessage } from '../../api/client';
+import { useEnvironment } from '../../auth/EnvironmentContext';
+import type { ChangeEntry } from '../../lib/changeLog';
+import { environmentNotes } from '../../lib/environment';
+import { ChangeNotice } from '../changes/ChangeHistory';
 import { displayUnit, formatValue, usesBaseline } from '../../content/inputSpecs';
 import { useDeleteMeasurement, useLogMeasurement, type RiskView } from '../../hooks/queries';
 import { HOUR, dayKey, toMillis } from '../../lib/dates';
@@ -74,6 +78,7 @@ export function MoodQuickCheck({ measurement, history }: { measurement: Measurem
   const undo = useDeleteMeasurement(measurement.id);
   const [value, setValue_] = useState(7);
   const [saved, setSaved] = useState(false);
+  const [undone, setUndone] = useState<ChangeEntry | null>(null);
   const latest = latestSet(history);
   const loggedToday = latest !== null && dayKey(toMillis(latest.timestamp)) === dayKey(Date.now());
   if (loggedToday && !saved) return null;
@@ -85,7 +90,7 @@ export function MoodQuickCheck({ measurement, history }: { measurement: Measurem
             <Icon name="check" /> Thanks. Your mood for today is logged.
           </p>
           {/* No index: the backend deletes the most recent reading, which is the one just saved. */}
-          <button type="button" className="btn btn-text" disabled={undo.isPending} onClick={() => undo.mutate(undefined, { onSuccess: () => setSaved(false) })}>
+          <button type="button" className="btn btn-text" disabled={undo.isPending} onClick={() => undo.mutate({ action: 'undo' }, { onSuccess: (entry) => { setSaved(false); setUndone(entry); } })}>
             {undo.isPending ? 'Undoing…' : 'Undo'}
           </button>
           {undo.isError && <p className="error-text">{errorMessage(undo.error)}</p>}
@@ -100,11 +105,12 @@ export function MoodQuickCheck({ measurement, history }: { measurement: Measurem
           <div className="mood-input">
             <input type="range" min={0} max={10} step={1} value={value} onChange={(e) => setValue_(Number(e.target.value))} aria-label="Mood from 0 to 10" />
             <span className="num mood-value">{value}</span>
-            <button type="button" className="btn btn-filled" disabled={log.isPending} onClick={() => log.mutate({ values: [value] }, { onSuccess: () => setSaved(true) })}>
+            <button type="button" className="btn btn-filled" disabled={log.isPending} onClick={() => { setUndone(null); log.mutate({ values: [value] }, { onSuccess: () => setSaved(true) }); }}>
               {log.isPending ? 'Saving…' : 'Log mood'}
             </button>
           </div>
           {log.isError && <p className="error-text">{errorMessage(log.error)}</p>}
+          {undone && <ChangeNotice entry={undone} onDismiss={() => setUndone(null)} />}
         </>
       )}
     </section>
@@ -118,11 +124,16 @@ interface ResultProps {
   risks: RiskView[];
   newBadges: Badge[];
   nextUp?: string;
+  /** Set when this result comes from editing an older reading. */
+  change?: ChangeEntry;
   onClose: () => void;
+  /** Called after Undo removed the reading, with the record of what was removed. */
+  onUndone: (entry: ChangeEntry) => void;
 }
 
 /** Shown on Home right after a measurement is saved. */
-export function ResultSheet({ measurement, history, risks, newBadges, nextUp, onClose }: ResultProps) {
+export function ResultSheet({ measurement, history, risks, newBadges, nextUp, change, onClose, onUndone }: ResultProps) {
+  const { environment } = useEnvironment();
   const [emergency, setEmergency] = useState(false);
   const undo = useDeleteMeasurement(measurement.id);
   // Once Undo is pressed the sheet stops showing the reading, so an older one never flashes up.
@@ -149,8 +160,9 @@ export function ResultSheet({ measurement, history, risks, newBadges, nextUp, on
   return (
     <div className="scrim" role="dialog" aria-modal="true" aria-labelledby="result-title">
       <div className={`dialog result zone-${zone}`}>
-        <span className="eyebrow">Saved</span>
+        <span className="eyebrow">{change ? 'Edit saved' : 'Saved'}</span>
         <h2 id="result-title">{measurement.name}</h2>
+        {change && <ChangeNotice entry={change} />}
         {isVisual ? (
           <p>Your image is saved. Images are not scored by the app yet, so share it with your Crew Medical Officer at the next check.</p>
         ) : value !== null ? (
@@ -170,6 +182,11 @@ export function ResultSheet({ measurement, history, risks, newBadges, nextUp, on
             <p>{advice}</p>
           </div>
         )}
+        {zone !== 'green' && zone !== 'none' && !emergency && environmentNotes(environment, measurement.id).map((note) => (
+          <p key={note} className="note">
+            <strong>{environment.name}:</strong> {note}
+          </p>
+        ))}
         {zone !== 'green' && zone !== 'none' && <EscalationCard zone={zone} />}
         {risks.length > 0 && (
           <div>
@@ -199,7 +216,7 @@ export function ResultSheet({ measurement, history, risks, newBadges, nextUp, on
             {zone === 'green' || zone === 'none' ? 'Done' : `Got it (${ZONE_LABEL[zone].toLowerCase()})`}
           </button>
           {/* No index: the backend deletes the most recent reading, which is the one just saved. */}
-          <button type="button" className="btn btn-text" onClick={() => undo.mutate(undefined, { onSuccess: onClose })}>
+          <button type="button" className="btn btn-text" onClick={() => undo.mutate({ action: 'undo' }, { onSuccess: onUndone })}>
             Undo this entry
           </button>
         </div>

@@ -27,6 +27,15 @@ export interface Instruction {
   text: string;
 }
 
+/** Limits for one mission situation: spacecraft, station, rover, moon or mars. */
+export interface MeasurementRange {
+  situation: string;
+  dangerousLow: number | null;
+  abnormalLow: number | null;
+  abnormalHigh: number | null;
+  dangerousHigh: number | null;
+}
+
 export interface Measurement {
   id: string;
   name: string;
@@ -41,6 +50,8 @@ export interface Measurement {
   lowRecommendation: string | null;
   highRecommendation: string | null;
   instructions: Instruction[];
+  /** Present once the backend serves per-situation limits; the single limits above are used until then. */
+  ranges?: MeasurementRange[];
 }
 
 export interface MeasurementSet {

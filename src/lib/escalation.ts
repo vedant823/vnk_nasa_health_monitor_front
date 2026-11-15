@@ -1,7 +1,8 @@
 // AI-generated code (Claude by Anthropic), reviewed by team VNK. See AI_DISCLOSURE.md.
 // Escalation ladder: the crew member acts first, then the Crew Medical Officer, then the flight surgeon.
 // It follows the decision tree in the project's ranges guide and the four triage tiers in the team's
-// requirements spreadsheet. The app shows the steps; it does not send messages itself.
+// requirements spreadsheet. The app shows the steps; it does not send messages itself. The flight
+// surgeon step gets an extra sentence for the crew member's environment (see lib/environment.ts).
 import type { Zone } from './zones';
 
 export interface EscalationStep {
@@ -35,7 +36,7 @@ export const ESCALATION: Partial<Record<Zone, Escalation>> = {
     steps: [
       { who: 'You', what: 'Call for a crewmate right away. Do not stay alone.' },
       { who: 'Crew Medical Officer', what: 'The Crew Medical Officer starts the emergency checklist.' },
-      { who: 'Flight surgeon', what: 'Alert the flight surgeon at once. Far from Earth a reply can take up to 44 minutes, so the crew acts first.' },
+      { who: 'Flight surgeon', what: 'Alert the flight surgeon at once. The crew acts first and does not wait.' },
     ],
   },
 };

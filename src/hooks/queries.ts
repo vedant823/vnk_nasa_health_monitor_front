@@ -1,18 +1,30 @@
 // AI-generated code (Claude by Anthropic), reviewed by team VNK. See AI_DISCLOSURE.md.
 // TanStack Query wrappers, one per backend endpoint, plus useDashboard which joins them for screens.
 import { useMemo } from 'react';
-import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueries, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import { useEnvironment } from '../auth/EnvironmentContext';
+import { displayUnit, formatValue, usesBaseline } from '../content/inputSpecs';
+import { recordChange, type ChangeAction, type ChangeEntry } from '../lib/changeLog';
+import { withEnvironmentLimits } from '../lib/environment';
 import { data, user } from '../api/endpoints';
 import type { LogMeasurementRequest, Measurement, MeasurementSet, Reminder, RiskEvaluation, RiskFactor } from '../api/types';
-import { measurementZone, scoreZone, worstZone, type Zone } from '../lib/zones';
+import { measurementZone, scoreZone, setValue, worstZone, type Zone } from '../lib/zones';
 
 const STATIC = { staleTime: Infinity, gcTime: Infinity };
 
 export const useRiskFactors = () => useQuery({ queryKey: ['riskFactors'], queryFn: data.getRisks, ...STATIC });
 export const useRiskFactor = (riskId: string) =>
   useQuery({ queryKey: ['riskFactor', riskId], queryFn: () => data.getRisk(riskId), ...STATIC });
-export const useMeasurement = (measurementId: string) =>
-  useQuery({ queryKey: ['measurement', measurementId], queryFn: () => data.getMeasurement(measurementId), ...STATIC });
+/** One measurement definition, with the limits for the crew member's environment applied. */
+export function useMeasurement(measurementId: string) {
+  const { environment } = useEnvironment();
+  return useQuery({
+    queryKey: ['measurement', measurementId],
+    queryFn: () => data.getMeasurement(measurementId),
+    select: (m: Measurement) => withEnvironmentLimits(m, environment.id),
+    ...STATIC,
+  });
+}
 
 /** The user's badges, evaluated by the backend (GET /users/badges). */
 export const useBadges = () => useQuery({ queryKey: ['badges'], queryFn: user.getBadges });
@@ -42,18 +54,86 @@ export function useLogMeasurement(measurementId: string) {
   });
 }
 
-/** Deletes one reading: the newest when no index is given, otherwise that position in the newest-first history. */
+const AFTER_CHANGE = (measurementId: string) => [['history', measurementId], ['trend', measurementId], ['upcoming'], ['digest'], ['riskScores'], ['riskScore'], ['badges']];
+
+const refreshAfterChange = (queryClient: QueryClient, measurementId: string) =>
+  Promise.all(AFTER_CHANGE(measurementId).map((queryKey) => queryClient.invalidateQueries({ queryKey })));
+
+const definitionOf = (queryClient: QueryClient, measurementId: string) =>
+  queryClient.fetchQuery({ queryKey: ['measurement', measurementId], queryFn: () => data.getMeasurement(measurementId), ...STATIC });
+
+/** A reading in words for the change record, e.g. "5.23 hours per night". */
+function readingText(m: Measurement, set: MeasurementSet | undefined): string {
+  const value = set ? setValue(set) : null;
+  if (m.category === 'visual' || value === null) return 'a saved image';
+  return `${formatValue(value)} ${displayUnit(m)}`.trim();
+}
+
+const isoTime = (set: MeasurementSet | undefined) => (set ? new Date(typeof set.timestamp === 'number' && set.timestamp < 1e12 ? set.timestamp * 1000 : set.timestamp).toISOString() : null);
+
+/**
+ * Deletes one reading: the newest when no index is given, otherwise that position in the
+ * newest-first history. The change (what was removed, and when in GMT) is written to the change record.
+ */
 export function useDeleteMeasurement(measurementId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (measurementIndex?: number) => user.deleteMeasurement(measurementId, measurementIndex),
+    mutationFn: async ({ index, action }: { index?: number; action: Exclude<ChangeAction, 'edit'> }): Promise<ChangeEntry> => {
+      const [m, history] = await Promise.all([definitionOf(queryClient, measurementId), user.getHistory(measurementId)]);
+      const target = history[index ?? 0];
+      await user.deleteMeasurement(measurementId, index);
+      return recordChange({
+        at: new Date().toISOString(),
+        action,
+        measurementId,
+        measurementName: m.name,
+        from: readingText(m, target),
+        to: null,
+        readingTakenAt: isoTime(target),
+      });
+    },
     // Removing a reading changes the same things that adding one does.
-    onSuccess: () =>
-      Promise.all(
-        [['history', measurementId], ['trend', measurementId], ['upcoming'], ['digest'], ['riskScores'], ['riskScore'], ['badges']].map(
-          (queryKey) => queryClient.invalidateQueries({ queryKey }),
-        ),
-      ),
+    onSuccess: () => refreshAfterChange(queryClient, measurementId),
+  });
+}
+
+/**
+ * Edits a reading. The backend has no edit call, so this saves the corrected reading and then
+ * deletes the old one. The corrected reading gets the current time, because the backend stamps
+ * every new reading itself. If saving fails, nothing is changed.
+ */
+export function useEditMeasurement(measurementId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ index, body }: { index: number; body: LogMeasurementRequest }): Promise<ChangeEntry> => {
+      const [m, before] = await Promise.all([definitionOf(queryClient, measurementId), user.getHistory(measurementId)]);
+      const target = before[index];
+      if (!target) throw new Error('That reading no longer exists.');
+      if (usesBaseline(m) && before.length === 1) {
+        // The only reading is the baseline: remove it first so the corrected one becomes the new baseline.
+        await user.deleteMeasurement(measurementId, index);
+        await user.logMeasurement(measurementId, body);
+      } else {
+        await user.logMeasurement(measurementId, body);
+        // Find the old reading again by its time, in case the order changed.
+        const now = await user.getHistory(measurementId);
+        const position = now.findIndex((set) => String(set.timestamp) === String(target.timestamp));
+        await user.deleteMeasurement(measurementId, position >= 0 ? position : index + 1);
+      }
+      const after = await user.getHistory(measurementId);
+      return recordChange({
+        at: new Date().toISOString(),
+        action: 'edit',
+        measurementId,
+        measurementName: m.name,
+        from: readingText(m, target),
+        to: readingText(m, after[0]),
+        readingTakenAt: isoTime(target),
+      });
+    },
+    onSuccess: () => refreshAfterChange(queryClient, measurementId),
+    // If the second step failed, the screens should still show what the backend now holds.
+    onError: () => refreshAfterChange(queryClient, measurementId),
   });
 }
 
@@ -92,6 +172,7 @@ export interface Dashboard {
  * discovered from the risk factors and the reminder list, so nothing is hardcoded.
  */
 export function useDashboard(): Dashboard {
+  const { environment } = useEnvironment();
   const factors = useRiskFactors();
   const scores = useRiskScores();
   const upcoming = useUpcoming(30);
@@ -118,9 +199,9 @@ export function useDashboard(): Dashboard {
     const histories: Record<string, MeasurementSet[] | undefined> = {};
     const zones: Record<string, Zone> = {};
     measurementIds.forEach((id, i) => {
-      measurements[id] = defsData[i];
+      measurements[id] = withEnvironmentLimits(defsData[i], environment.id);
       histories[id] = histsData[i];
-      zones[id] = measurementZone(defsData[i], histsData[i]);
+      zones[id] = measurementZone(measurements[id], histsData[i]);
     });
     const scoreById = new Map((scores.data ?? []).map((e) => [e.riskId, e]));
     const risks: RiskView[] = (factors.data ?? []).map((factor) => {

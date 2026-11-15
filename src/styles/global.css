@@ -409,3 +409,61 @@ button.legend-btn:hover, .legend-btn.selected { background: var(--accent-tint); 
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+
+/* Environment picker, profile, summary, change history, info page */
+.env-setup { display: flex; flex-direction: column; gap: 14px; }
+.env-options { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.env-option { display: flex; flex-direction: column; gap: 3px; padding: 14px; border: 1.5px solid var(--hairline); border-radius: 14px; cursor: pointer; position: relative; }
+.env-option:hover { border-color: var(--accent); }
+.env-option.selected { border-color: var(--accent); background: var(--accent-tint); }
+.env-option input { position: absolute; top: 14px; right: 14px; accent-color: var(--accent); }
+.env-option:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.env-name { font-weight: 600; padding-right: 28px; }
+.facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px 20px; margin: 0; }
+.facts dt { font-size: 12.5px; color: var(--muted); }
+.facts dd { margin: 0; font-weight: 600; }
+.frequency-saved { color: var(--green); font-weight: 600; font-size: 14px; }
+.change-list { display: flex; flex-direction: column; }
+.change-list li { display: grid; grid-template-columns: 190px 1fr; gap: 12px; padding: 8px 0; border-top: 1px solid var(--hairline); font-size: 14px; }
+.change-when { color: var(--muted); }
+.change-notice { align-items: flex-start; }
+.how-list { display: flex; flex-direction: column; gap: 12px; }
+.how-list li { display: flex; gap: 12px; align-items: flex-start; }
+.how-list p { margin: 2px 0 0; }
+.how-list .step-num { --z: var(--accent-ink); }
+.summary-top { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+.flag-list { display: flex; flex-direction: column; }
+.flag-list li { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 8px 0; border-top: 1px solid var(--hairline); }
+.table-scroll { overflow-x: auto; }
+a.chip { text-decoration: none; color: inherit; display: inline-flex; align-items: center; gap: 4px; }
+a.chip:hover { color: var(--accent-ink); }
+@media (max-width: 560px) {
+  .change-list li { grid-template-columns: 1fr; gap: 2px; }
+}
+@media print {
+  .topbar, .footer, .demo-bar, .no-print, .back-link, .skip-link { display: none !important; }
+  .card { break-inside: avoid; box-shadow: none; }
+  body { background: #fff; }
+}
+
+/* Step illustrations (StepArt.tsx). AI-generated line drawings. */
+.il { fill: none; stroke: var(--il-ink, #24405e); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.il .f { fill: var(--il-fill, #ffffff); }
+.il .t { fill: var(--il-tint, #d6e4f5); }
+.il .k { fill: var(--il-ink, #24405e); stroke: none; }
+.il .a { stroke: var(--il-accent, #c2571a); }
+.il .af { fill: var(--il-accent, #c2571a); stroke: none; }
+.il .w { stroke-width: 1.4; }
+.il .r { stroke: #b3261e; }
+.il .x { stroke-dasharray: 3 4; }
+.il .d { stroke-dasharray: 1 5; }
+.il .band { fill: var(--il-tint, #d6e4f5); stroke: none; }
+.il .wall { stroke-width: 3.2; }
+.il text { fill: var(--il-ink, #24405e); stroke: none; font: 700 11px system-ui, sans-serif; }
+.il text.ta { fill: var(--il-accent, #c2571a); }
+@media (prefers-color-scheme: dark) {
+  .il { --il-ink: #cfdcec; --il-fill: #10151c; --il-tint: #2b3d55; --il-accent: #f0a160; }
+  .il .r { stroke: #ff8a80; }
+}
+.art-mark-bg { fill: rgba(255, 255, 255, 0.92); stroke: none; }
+.art-mark { fill: #33414f; font: 600 7.5px system-ui, sans-serif; letter-spacing: 0.02em; }

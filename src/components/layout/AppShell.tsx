@@ -34,13 +34,17 @@ export function AppShell({ children }: { children: ReactNode }) {
               Home
             </NavLink>
             <NavLink to="/reminders">Reminders</NavLink>
-            <NavLink to="/about">About and AI use</NavLink>
+            <NavLink to="/summary">Summary</NavLink>
+            <NavLink to="/info">Info</NavLink>
+            <NavLink to="/profile">Profile</NavLink>
           </nav>
         )}
         <div className="topbar-right">
           {token ? (
             <>
-              <span className="muted small user-name">{username}</span>
+              <NavLink to="/profile" className="user-name">
+                {username || 'Profile'}
+              </NavLink>
               <button
                 type="button"
                 className="btn btn-text"
@@ -53,7 +57,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               </button>
             </>
           ) : (
-            <NavLink to="/about">About and AI use</NavLink>
+            <NavLink to="/info">Info and AI use</NavLink>
           )}
         </div>
       </header>
@@ -66,7 +70,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <footer className="footer">
         <p>
           Hackathon prototype, not a medical device. Code, illustrations and explainer text were made with AI and are labelled.{' '}
-          <Link to="/about">How AI was used</Link>
+          <Link to="/info">How AI was used</Link>
         </p>
       </footer>
     </div>

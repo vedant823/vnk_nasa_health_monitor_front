@@ -1,6 +1,11 @@
 // AI-generated code and text (Claude by Anthropic), reviewed by team VNK. See AI_DISCLOSURE.md.
-// About: what the app is, exactly where and how AI was used, and the sources behind the content.
+// Info: how the app works, why the exams matter, exactly where and how AI was used, and the
+// sources behind the content.
+import { Link } from 'react-router-dom';
+import { useAuth } from '../auth/AuthContext';
 import { ErrorState, PageHeader } from '../components/layout/AppShell';
+import { GENERAL_EXPLAINER } from '../content/explainers';
+import { ENVIRONMENTS, commDelayText } from '../lib/environment';
 import { AiMark } from '../components/status/Status';
 
 const SOURCES: { name: string; url: string; use: string }[] = [
@@ -25,10 +30,79 @@ const LIBRARIES = [
   { name: 'Roboto Flex and Roboto Mono fonts', url: 'https://fonts.google.com/specimen/Roboto+Flex', license: 'SIL Open Font License / Apache 2.0' },
 ];
 
+const HOW_IT_WORKS: { title: string; text: string }[] = [
+  { title: 'Sign in and choose where you are', text: 'Create an account or log in. The first time, you choose your mission environment: spacecraft, space station, rover, Moon base or Mars base. You can change it on your Profile page.' },
+  { title: 'Look at Home', text: 'Home shows your mission readiness score, a body outline colored by how each area is doing, a square for every health risk, and the checks that are due next. Tap a body area or a square to open that risk.' },
+  { title: 'Read the colors', text: 'Grey means no readings yet. Green means healthy. Yellow means watch. Red means act now. Every color also has a word and an icon, so you never have to rely on color alone.' },
+  { title: 'Take a measurement', text: 'Open a measurement and press "Take this measurement". You get a list of what you need and numbered steps with a picture for each one. Enter the reading in the bar at the bottom and save.' },
+  { title: 'See what the result means', text: 'After saving you see the reading, its color, what to do, and which risk scores it changed. A risk score starts at 100. Each "watch" reading takes off 40 points and each "act now" reading takes off 75.' },
+  { title: 'Know who to tell', text: 'For a yellow or red result the app shows the steps: you act first, then the Crew Medical Officer, then the flight surgeon on Earth. A red result can prepare a report to send. Ticking a red-flag symptom, such as chest pain, turns any result into an emergency.' },
+  { title: 'Fix mistakes', text: 'Right after saving you can press Undo. On a measurement page you can edit or delete any saved reading. Every edit, undo and delete is written to the change history with the date and time in GMT and what changed.' },
+  { title: 'Stay on schedule', text: 'The Reminders page lists what is due today, this week and this month. Each measurement page lets you set how many days pass between reminders. A banner on Home tells you when a check is due.' },
+  { title: 'Earn badges', text: 'Regular check-ins build a streak, fill the weekly bar and earn badges. They are there to make a daily habit easier to keep.' },
+  { title: 'Share with the Crew Medical Officer', text: 'The Crew Medical Officer summary puts all risks, latest readings, red flags and recent changes on one page that can be printed or read out.' },
+];
+
 export function AboutPage() {
+  const { token } = useAuth();
   return (
     <div className="page narrow prose">
-      <PageHeader title="About this app and how AI was used" eyebrow="About" back={{ to: '/', label: 'Home' }} />
+      <PageHeader title="How this app works" eyebrow="Info" back={{ to: '/', label: 'Home' }} />
+
+      <section className="card">
+        <h2>Why are these exams needed?</h2>
+        <p>{GENERAL_EXPLAINER.why}</p>
+        <h2>How does spaceflight affect your health?</h2>
+        <p>{GENERAL_EXPLAINER.space}</p>
+        <p className="muted small">Every risk and measurement screen answers these two questions for that specific risk or exam.</p>
+      </section>
+
+      <section className="card">
+        <h2>Using the app, step by step</h2>
+        <ol className="how-list">
+          {HOW_IT_WORKS.map((step, i) => (
+            <li key={step.title}>
+              <span className="step-num">{i + 1}</span>
+              <div>
+                <strong>{step.title}</strong>
+                <p>{step.text}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+        {token && (
+          <div className="chips">
+            <Link to="/" className="chip">Home</Link>
+            <Link to="/reminders" className="chip">Reminders</Link>
+            <Link to="/summary" className="chip">Crew Medical Officer summary</Link>
+            <Link to="/profile" className="chip">Profile</Link>
+          </div>
+        )}
+      </section>
+
+      <section className="card">
+        <h2>Mission environments</h2>
+        <p>Where you are changes some healthy ranges, the advice you see, and how fast help from Earth can reach you.</p>
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Environment</th>
+              <th>Message delay to Earth</th>
+              <th>Getting back to full medical care</th>
+            </tr>
+          </thead>
+          <tbody>
+            {ENVIRONMENTS.map((env) => (
+              <tr key={env.id}>
+                <td>{env.name}</td>
+                <td>{commDelayText(env)}</td>
+                <td>{env.care}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="muted small">Your Profile page lists the ranges that change in your environment.</p>
+      </section>
 
       <section className="card">
         <h2>What this is</h2>
@@ -61,7 +135,7 @@ export function AboutPage() {
             </tr>
             <tr>
               <td>Images and illustrations</td>
-              <td>The body outline and the step pictures were drawn by AI as simple vector shapes. No photos and no third-party artwork are used.</td>
+              <td>The body outline and the picture for every measurement step were drawn by AI as simple vector shapes. No photos and no third-party artwork are used.</td>
               <td>
                 Every one carries a visible watermark like this: <span className="inline-mark"><AiMark /></span>
               </td>
@@ -120,7 +194,7 @@ export function AboutPage() {
       <section className="card">
         <h2>Your data</h2>
         <p>
-          Readings are stored by the mission's health system (the team's backend). This browser only keeps your sign-in token, your earned badges and reminder snooze times.
+          Readings are stored by the mission's health system (the team's backend). This browser only keeps your sign-in token, your chosen environment, the change history, your reminder choices and which badges you have already seen.
           Logging out removes the token from this device.
         </p>
       </section>
