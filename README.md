@@ -48,6 +48,30 @@ data that follows the backend's rules and is saved in the browser. Create any ac
 empty, or create an account whose username starts with `demo` to get three weeks of simulated
 readings. A bar at the top of every screen says that the data is simulated.
 
+### Docker (no Node needed)
+
+A multi-stage `Dockerfile` builds the app with Node and serves the result with nginx, so you
+only need Docker (or Podman) — no local Node or npm install. The image listens on port 80.
+
+```bash
+docker build -t vnk-nasa-health-monitor-front .
+docker run -d -p 5173:80 vnk-nasa-health-monitor-front   # opens on http://localhost:5173
+```
+
+Vite bakes `VITE_API_URL` and `VITE_USE_MOCKS` into the JavaScript bundle at build time, so they
+cannot be changed with `docker run -e` — pass them as build args instead:
+
+```bash
+# Backend on another host
+podman build --build-arg VITE_API_URL=http://myhost:8080 -t vnk-nasa-health-monitor-front .
+
+# Demo mode with simulated data, no backend needed
+podman build --build-arg VITE_USE_MOCKS=true -t vnk-nasa-health-monitor-front .
+```
+
+The default `VITE_API_URL` (`http://localhost:8080`) works for local demo use, since the backend's
+CORS config only accepts requests from `http://localhost:5173`.
+
 ## How it is organized
 
 ```
