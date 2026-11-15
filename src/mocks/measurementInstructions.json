@@ -1,0 +1,307 @@
+{
+  "measurements": [
+    {
+      "id": "white_blood_cells",
+      "instructions": [
+        {
+          "image": "images/white_blood_cells/step1.png",
+          "text": "Wash hands and clean a fingertip with an alcohol wipe."
+        },
+        {
+          "image": "images/white_blood_cells/step2.png",
+          "text": "Prick the fingertip with a lancet and wipe away the first drop."
+        },
+        {
+          "image": "images/white_blood_cells/step3.png",
+          "text": "Fill the white blood cell analyzer cuvette from the second drop."
+        },
+        {
+          "image": "images/white_blood_cells/step4.png",
+          "text": "Insert the cuvette into the HemoCue white cell analyzer and wait for the result."
+        },
+        {
+          "image": "images/white_blood_cells/step5.png",
+          "text": "Enter the result in the app."
+        }
+      ]
+    },
+    {
+      "id": "lymphocytes",
+      "instructions": [
+        {
+          "image": "images/lymphocytes/step1.png",
+          "text": "Use the same finger-stick sample as the white blood cell count."
+        },
+        {
+          "image": "images/lymphocytes/step2.png",
+          "text": "Read the lymphocyte value from the analyzer's differential result."
+        },
+        {
+          "image": "images/lymphocytes/step3.png",
+          "text": "Enter the result in the app."
+        }
+      ]
+    },
+    {
+      "id": "body_mass_change",
+      "instructions": [
+        {
+          "image": "images/body_mass_change/step1.png",
+          "text": "Measure at the same time of day, before eating, after using the toilet."
+        },
+        {
+          "image": "images/body_mass_change/step2.png",
+          "text": "Wear the same light clothing as at baseline."
+        },
+        {
+          "image": "images/body_mass_change/step3.png",
+          "text": "Sit on the body mass measurement device, hold still while it oscillates."
+        },
+        {
+          "image": "images/body_mass_change/step4.png",
+          "text": "Enter the mass; the app converts it to percent change from pre-flight."
+        }
+      ]
+    },
+    {
+      "id": "grip_strength_change",
+      "instructions": [
+        {
+          "image": "images/grip_strength_change/step1.png",
+          "text": "Sit upright with the elbow bent at 90 degrees."
+        },
+        {
+          "image": "images/grip_strength_change/step2.png",
+          "text": "Squeeze the grip-force sensor as hard as possible for 3 seconds."
+        },
+        {
+          "image": "images/grip_strength_change/step3.png",
+          "text": "Rest 30 seconds and repeat 3 times with each hand."
+        },
+        {
+          "image": "images/grip_strength_change/step4.png",
+          "text": "Enter the best value; the app converts it to percent change from pre-flight."
+        }
+      ]
+    },
+    {
+      "id": "intraocular_pressure",
+      "instructions": [
+        {
+          "image": "images/intraocular_pressure/step1.png",
+          "text": "Sit with the head supported and look straight ahead."
+        },
+        {
+          "image": "images/intraocular_pressure/step2.png",
+          "text": "A crewmate applies one anesthetic eye drop as trained."
+        },
+        {
+          "image": "images/intraocular_pressure/step3.png",
+          "text": "Cover the tonometer tip with a fresh sterile cover."
+        },
+        {
+          "image": "images/intraocular_pressure/step4.png",
+          "text": "Touch the tip lightly to the center of the cornea until it beeps; take 3 readings per eye."
+        },
+        {
+          "image": "images/intraocular_pressure/step5.png",
+          "text": "Enter the average for each eye in the app."
+        }
+      ]
+    },
+    {
+      "id": "retinal_thickness_change",
+      "instructions": [
+        {
+          "image": "images/retinal_thickness_change/step1.png",
+          "text": "Dim the lights and rest the chin and forehead on the OCT support."
+        },
+        {
+          "image": "images/retinal_thickness_change/step2.png",
+          "text": "Look at the fixation light without blinking while the operator centers the scan."
+        },
+        {
+          "image": "images/retinal_thickness_change/step3.png",
+          "text": "Capture the optic disc scan for each eye."
+        },
+        {
+          "image": "images/retinal_thickness_change/step4.png",
+          "text": "The app reads the retinal thickness and compares it with the pre-flight scan."
+        }
+      ]
+    },
+    {
+      "id": "oct_fundus_scan",
+      "instructions": [
+        {
+          "image": "images/oct_fundus_scan/step1.png",
+          "text": "Dim the lights and position the head on the support."
+        },
+        {
+          "image": "images/oct_fundus_scan/step2.png",
+          "text": "Capture an OCT scan and a fundus image of each eye."
+        },
+        {
+          "image": "images/oct_fundus_scan/step3.png",
+          "text": "Check the image is in focus and the optic disc is centered; retake if not."
+        },
+        {
+          "image": "images/oct_fundus_scan/step4.png",
+          "text": "Save the images to the app; they are attached to the flight surgeon packet."
+        }
+      ]
+    },
+    {
+      "id": "stand_test_systolic_drop",
+      "instructions": [
+        {
+          "image": "images/stand_test_systolic_drop/step1.png",
+          "text": "Lie still for 5 minutes wearing the Bio-Monitor shirt (or a blood pressure cuff)."
+        },
+        {
+          "image": "images/stand_test_systolic_drop/step2.png",
+          "text": "Record lying blood pressure."
+        },
+        {
+          "image": "images/stand_test_systolic_drop/step3.png",
+          "text": "Stand up (or, in weightlessness, use the leg-pressure test as trained) and stay still."
+        },
+        {
+          "image": "images/stand_test_systolic_drop/step4.png",
+          "text": "Record blood pressure at 1 and 3 minutes; stop and sit if dizzy."
+        },
+        {
+          "image": "images/stand_test_systolic_drop/step5.png",
+          "text": "The app calculates the fall in systolic pressure."
+        }
+      ]
+    },
+    {
+      "id": "resting_heart_rate",
+      "instructions": [
+        {
+          "image": "images/resting_heart_rate/step1.png",
+          "text": "Rest quietly for 5 minutes wearing the Bio-Monitor shirt."
+        },
+        {
+          "image": "images/resting_heart_rate/step2.png",
+          "text": "Record the average heart rate over 1 minute."
+        },
+        {
+          "image": "images/resting_heart_rate/step3.png",
+          "text": "Enter or sync the value in the app."
+        }
+      ]
+    },
+    {
+      "id": "ejection_fraction",
+      "instructions": [
+        {
+          "image": "images/ejection_fraction/step1.png",
+          "text": "Lie on the left side and expose the chest."
+        },
+        {
+          "image": "images/ejection_fraction/step2.png",
+          "text": "Follow the guided ultrasound software to place the probe for a heart view."
+        },
+        {
+          "image": "images/ejection_fraction/step3.png",
+          "text": "Record 3 heart beats in the standard views."
+        },
+        {
+          "image": "images/ejection_fraction/step4.png",
+          "text": "The software estimates ejection fraction; save the clips to the app."
+        }
+      ]
+    },
+    {
+      "id": "sleep_duration",
+      "instructions": [
+        {
+          "image": "images/sleep_duration/step1.png",
+          "text": "Wear the Bio-Monitor headband and shirt overnight."
+        },
+        {
+          "image": "images/sleep_duration/step2.png",
+          "text": "On waking, confirm bedtime and wake time in the sleep diary."
+        },
+        {
+          "image": "images/sleep_duration/step3.png",
+          "text": "The app averages the last 3 nights."
+        }
+      ]
+    },
+    {
+      "id": "memory_score_change",
+      "instructions": [
+        {
+          "image": "images/memory_score_change/step1.png",
+          "text": "Find a quiet spot and silence alerts."
+        },
+        {
+          "image": "images/memory_score_change/step2.png",
+          "text": "Open the cognition test on the station laptop or tablet."
+        },
+        {
+          "image": "images/memory_score_change/step3.png",
+          "text": "Complete all tasks without stopping."
+        },
+        {
+          "image": "images/memory_score_change/step4.png",
+          "text": "The app compares the score with your baseline."
+        }
+      ]
+    },
+    {
+      "id": "balance_score_change",
+      "instructions": [
+        {
+          "image": "images/balance_score_change/step1.png",
+          "text": "Stand (or, in weightlessness, hold the posture task position) with feet together."
+        },
+        {
+          "image": "images/balance_score_change/step2.png",
+          "text": "Follow the tablet balance task with eyes open, then eyes closed."
+        },
+        {
+          "image": "images/balance_score_change/step3.png",
+          "text": "The app scores sway and compares it with your baseline."
+        }
+      ]
+    },
+    {
+      "id": "mood_score",
+      "instructions": [
+        {
+          "image": "images/mood_score/step1.png",
+          "text": "Open the daily check-in in the app."
+        },
+        {
+          "image": "images/mood_score/step2.png",
+          "text": "Rate mood, stress and how well the team is working, from 0 to 10."
+        },
+        {
+          "image": "images/mood_score/step3.png",
+          "text": "Add a note if you want; answers are private to you and the medical team."
+        }
+      ]
+    },
+    {
+      "id": "solar_proton_flux",
+      "instructions": [
+        {
+          "image": "images/solar_proton_flux/step1.png",
+          "text": "The app reads solar alerts relayed from NASA and NOAA and the onboard radiation monitors automatically."
+        },
+        {
+          "image": "images/solar_proton_flux/step2.png",
+          "text": "Check your personal dosimeter is worn and logging."
+        },
+        {
+          "image": "images/solar_proton_flux/step3.png",
+          "text": "Follow the shelter instructions shown by the app."
+        }
+      ]
+    }
+  ]
+}

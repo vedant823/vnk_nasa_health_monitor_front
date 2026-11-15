@@ -1,0 +1,189 @@
+{
+  "risks": [
+    {
+      "id": "immune_dysregulation",
+      "name": "Immune Dysregulation",
+      "category": "physical",
+      "measurementIds": [
+        "white_blood_cells",
+        "lymphocytes"
+      ],
+      "reason": "Spaceflight weakens the immune cells that fight infection while raising inflammation. After the Inspiration4 flight, lymphocytes fell 17% and IL-6 rose 103% in the crew, so infections and dormant viruses can flare when medical help is far away."
+    },
+    {
+      "id": "cardiovascular_adaptations",
+      "name": "Cardiovascular Adaptations",
+      "category": "physical",
+      "measurementIds": [
+        "stand_test_systolic_drop",
+        "resting_heart_rate",
+        "ejection_fraction"
+      ],
+      "reason": "Without gravity the body loses fluid and the heart and blood-vessel reflexes weaken. On Earth, standing up cut brain blood flow by 31% in healthy adults; after flight the drop is larger and can cause fainting at landing or on a planet."
+    },
+    {
+      "id": "host_microorganism_interactions",
+      "name": "Host-Microorganism Interactions",
+      "category": "physical",
+      "measurementIds": [
+        "white_blood_cells"
+      ],
+      "reason": "A closed cabin and changed diet reshape the body's microbes. Bacterial diversity fell 24% after the Inspiration4 flight, which can make skin, eye and gut infections more likely."
+    },
+    {
+      "id": "nutrition",
+      "name": "Nutrition",
+      "category": "physical",
+      "measurementIds": [
+        "body_mass_change"
+      ],
+      "reason": "Eating too little speeds muscle and bone loss. Body mass is the easiest daily warning sign: in rats, weight change tracked strength (r = 0.79) and bone (r = 0.63)."
+    },
+    {
+      "id": "bone_loss_fracture_kidney_stones",
+      "name": "Bone Loss, Fractures and Kidney Stones",
+      "category": "physical",
+      "measurementIds": [
+        "body_mass_change",
+        "grip_strength_change"
+      ],
+      "reason": "Bones lose about 1% of their mass per month in weightlessness, 20 to 30 times faster than ageing on Earth, and the released calcium raises kidney-stone risk. Weak bones can break during EVA or landing."
+    },
+    {
+      "id": "muscle_and_aerobic_fitness",
+      "name": "Muscle and Aerobic Fitness",
+      "category": "physical",
+      "measurementIds": [
+        "grip_strength_change",
+        "body_mass_change"
+      ],
+      "reason": "Unused muscles shrink quickly. Rats lost 54% of grip strength in 28 days of weightlessness and still lost 44% at Moon-like gravity, so crews need exercise and strength checks to stay able to work."
+    },
+    {
+      "id": "sans_eye_and_brain_pressure",
+      "name": "SANS (Eye and Brain Pressure)",
+      "category": "physical",
+      "measurementIds": [
+        "intraocular_pressure",
+        "retinal_thickness_change",
+        "oct_fundus_scan"
+      ],
+      "reason": "Fluid shifting toward the head swells the optic nerve and changes vision (SANS). In a head-down model, eye pressure rose 4.2 mmHg in 7 days and stayed high; most long-duration astronauts show at least one sign."
+    },
+    {
+      "id": "sensorimotor_changes",
+      "name": "Sensorimotor Changes",
+      "category": "physical",
+      "measurementIds": [
+        "balance_score_change"
+      ],
+      "reason": "The inner ear and body sense re-tune to weightlessness, so balance and walking are off when gravity returns. Mice walked with 19% longer strides and 27% wider paw angles after flight, a risk for EVA, driving and landing."
+    },
+    {
+      "id": "hypoxia_and_cabin_co2",
+      "name": "Hypoxia and Cabin CO2",
+      "category": "physical",
+      "measurementIds": [],
+      "reason": "High cabin CO2 or low oxygen causes headaches, fatigue and slower thinking; NASA keeps 7-day CO2 below 2.5 mmHg to hold headache risk under 1%. No public CSV of these readings was used, so this risk has no measurement yet."
+    },
+    {
+      "id": "decompression_sickness",
+      "name": "Decompression Sickness",
+      "category": "physical",
+      "measurementIds": [],
+      "reason": "Moving from cabin pressure to suit pressure can form gas bubbles that cause joint pain or nerve symptoms within about 1 to 4 hours of an EVA. No public CSV was found, so this risk has no measurement yet."
+    },
+    {
+      "id": "eva_injury",
+      "name": "EVA Injury",
+      "category": "physical",
+      "measurementIds": [],
+      "reason": "Spacesuits strain hands and shoulders, and planetary dust irritates eyes and lungs. No public CSV was found, so this risk has no measurement yet."
+    },
+    {
+      "id": "injury_from_dynamic_loads",
+      "name": "Injury from Dynamic Loads",
+      "category": "physical",
+      "measurementIds": [],
+      "reason": "Launch, landing and docking loads can injure the neck and back, especially after bone and muscle loss. No public CSV was found, so this risk has no measurement yet."
+    },
+    {
+      "id": "radiation_acute_syndrome",
+      "name": "Acute Radiation Syndrome",
+      "category": "physical",
+      "measurementIds": [
+        "solar_proton_flux"
+      ],
+      "reason": "Solar storms can deliver a dangerous dose within hours outside Earth's magnetic field. Days with high proton levels track the solar cycle closely (Spearman 0.81), and 2024 had 119 solar particle event records."
+    },
+    {
+      "id": "radiation_cancer",
+      "name": "Radiation Cancer Risk",
+      "category": "physical",
+      "measurementIds": [
+        "solar_proton_flux"
+      ],
+      "reason": "Every dose adds to lifetime cancer risk, so NASA limits career dose to 600 mSv. A Mars mission could pass that limit, so dose must be tracked from launch."
+    },
+    {
+      "id": "radiation_central_nervous_system",
+      "name": "Radiation: Central Nervous System",
+      "category": "physical",
+      "measurementIds": [
+        "memory_score_change",
+        "solar_proton_flux"
+      ],
+      "reason": "Space radiation can damage brain cells. Mice exposed to 100 cGy scored half as well on a memory test as unexposed mice, so crews need regular cognition checks."
+    },
+    {
+      "id": "radiation_cardiovascular",
+      "name": "Radiation: Cardiovascular",
+      "category": "physical",
+      "measurementIds": [
+        "ejection_fraction",
+        "resting_heart_rate",
+        "solar_proton_flux"
+      ],
+      "reason": "Radiation may damage the heart and blood vessels over years. Low doses did not consistently lower heart pumping in mice over 9 months, but heart function should still be tracked on long missions."
+    },
+    {
+      "id": "behavioral_conditions",
+      "name": "Behavioral Conditions",
+      "category": "psychological",
+      "measurementIds": [
+        "mood_score"
+      ],
+      "reason": "Isolation, confinement, radiation and poor sleep affect mood. Rats that were unloaded and irradiated showed more anxiety and despair, so a daily mood check-in can catch problems early."
+    },
+    {
+      "id": "sleep_loss_and_circadian_disruption",
+      "name": "Sleep Loss and Circadian Disruption",
+      "category": "psychological",
+      "measurementIds": [
+        "sleep_duration"
+      ],
+      "reason": "Astronauts average about 6 hours of sleep versus 7.4 hours for adults on Earth, which slows thinking and raises error rates during critical tasks."
+    },
+    {
+      "id": "team_performance",
+      "name": "Team Performance",
+      "category": "psychological",
+      "measurementIds": [],
+      "reason": "Small crews under stress can struggle to communicate and cooperate. No public CSV was found, so this risk has no measurement yet."
+    },
+    {
+      "id": "human_system_integration",
+      "name": "Human System Integration",
+      "category": "psychological",
+      "measurementIds": [],
+      "reason": "Poorly designed tasks and tools raise workload and errors, especially when the crew is tired. No public CSV was found, so this risk has no measurement yet."
+    },
+    {
+      "id": "inadequate_ground_support_and_medical_care",
+      "name": "Inadequate Ground Support and Medical Care",
+      "category": "psychological",
+      "measurementIds": [],
+      "reason": "Far from Earth, communication delays of up to about 22 minutes mean the crew must handle medical problems on their own. No public CSV was found, so this risk has no measurement yet."
+    }
+  ]
+}

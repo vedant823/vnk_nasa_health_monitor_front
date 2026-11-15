@@ -1,0 +1,33 @@
+{
+  "name": "vnk-nasa-health-monitor-front",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Crew health self-check frontend for the NASA Space Apps Challenge 2026. Source code in this package was generated with AI assistance (Claude, Anthropic) and reviewed by the team. See AI_DISCLOSURE.md.",
+  "type": "module",
+  "aiGenerated": {
+    "code": "AI-generated with Claude (Anthropic), reviewed by the team",
+    "images": "All images in public/images and all in-app illustrations are AI-generated and carry a visible AI-generated watermark",
+    "details": "AI_DISCLOSURE.md"
+  },
+  "scripts": {
+    "dev": "vite --port 5173 --strictPort",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --port 5173 --strictPort",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.107.1",
+    "axios": "^1.21.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.30.6",
+    "recharts": "^2.15.4"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "@vitejs/plugin-react": "^4.7.0",
+    "typescript": "^5.9.3",
+    "vite": "^5.4.21"
+  }
+}
