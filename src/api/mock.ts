@@ -7,20 +7,28 @@ import riskInfo from '../mocks/riskInfo.json';
 import details from '../mocks/measurementDetails.json';
 import instructions from '../mocks/measurementInstructions.json';
 import badgeFile from '../mocks/badges.json';
-import type { BadgeCriterion, BadgeRule, BadgeSet, BaselineMode, Measurement, MeasurementSet, Reminder, RiskEvaluation, RiskFactor } from './types';
+import flagFile from '../mocks/measurementFlags.json';
+import type { BadgeCriterion, BadgeRule, BadgeSet, BaselineMode, ChildOverview, ChildReminder, Measurement, MeasurementRange, MeasurementSet, Reminder, RiskEvaluation, RiskFactor, UserStatus } from './types';
 
 const DAY = 86_400_000;
-const STORE_KEY = 'chm.mock.v1';
+const STORE_KEY = 'chm.mock.v2';
+const ENVIRONMENTS = ['spacecraft', 'station', 'rover', 'moon', 'mars'];
 const DEFAULT_FREQUENCY = 7;
 
 interface StoredSet {
   timestamp: string;
   values: number[] | null;
   images: string[] | null;
+  /** Visual readings: findings counted by the medical officer. Null = not reviewed yet. */
+  numAbnormal?: number | null;
 }
 interface MockUser {
   password: string;
   token: string;
+  environment: string;
+  status: UserStatus;
+  /** Username of this user's medical officer (the mock uses usernames as user ids). */
+  officer: string | null;
   freq: Record<string, number>;
   history: Record<string, StoredSet[]>;
   baselines: Record<string, number>;
@@ -29,7 +37,7 @@ type Store = Record<string, MockUser>;
 
 const risks = (riskInfo as { risks: RiskFactor[] }).risks;
 
-type DetailRow = Partial<Measurement> & { id: string; name: string; type: string };
+type DetailRow = Partial<Measurement> & { id: string; name: string; type: string; ranges?: MeasurementRange[] };
 const stepsById = new Map(
   (instructions as { measurements: { id: string; instructions: Measurement['instructions'] }[] }).measurements.map(
     (m) => [m.id, m.instructions],
@@ -40,10 +48,12 @@ const measurements: Measurement[] = (details as { measurements: DetailRow[] }).m
   name: d.name,
   category: d.type === 'visual' ? 'visual' : 'numerical',
   unit: d.unit ?? null,
-  dangerousLow: d.dangerousLow ?? null,
-  abnormalLow: d.abnormalLow ?? null,
-  abnormalHigh: d.abnormalHigh ?? null,
-  dangerousHigh: d.dangerousHigh ?? null,
+  // The backend serves only the per-environment list; the single limits are filled by api/endpoints.
+  dangerousLow: null,
+  abnormalLow: null,
+  abnormalHigh: null,
+  dangerousHigh: null,
+  ranges: d.ranges ?? [],
   canBeNegative: d.canBeNegative ?? false,
   baselineMode: (d.baselineMode as BaselineMode | undefined) ?? 'none',
   lowRecommendation: d.lowRecommendation ?? null,
@@ -51,6 +61,22 @@ const measurements: Measurement[] = (details as { measurements: DetailRow[] }).m
   instructions: stepsById.get(d.id) ?? [],
 }));
 const measurementById = new Map(measurements.map((m) => [m.id, m]));
+const flagsById = new Map((flagFile as { measurements: { measurementID: string; flags: string[] }[] }).measurements.map((f) => [f.measurementID, f.flags]));
+
+const NO_LIMITS: MeasurementRange = { situation: 'station', dangerousLow: null, abnormalLow: null, abnormalHigh: null, dangerousHigh: null };
+/** The guideline range for the user's environment, as the backend's Measurement.rangeFor does. */
+const limitsFor = (u: MockUser, m: Measurement): MeasurementRange =>
+  m.ranges?.find((r) => r.situation === u.environment) ?? m.ranges?.find((r) => r.situation === 'station') ?? NO_LIMITS;
+
+/**
+ * A stand-in picture for seeded scans in demo mode. It is a drawing, not a real eye scan, and it
+ * says so in the picture itself.
+ */
+const SIMULATED_SCAN =
+  'data:image/svg+xml;base64,' +
+  btoa(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300"><rect width="400" height="300" fill="#1b1410"/><circle cx="200" cy="150" r="128" fill="#7a3415"/><circle cx="200" cy="150" r="128" fill="none" stroke="#3a1a0c" stroke-width="6"/><circle cx="262" cy="150" r="26" fill="#f0c98a"/><circle cx="262" cy="150" r="11" fill="#fbe9c8"/><circle cx="150" cy="152" r="16" fill="#5a2410"/><g fill="none" stroke="#b9391c" stroke-width="3" stroke-linecap="round"><path d="M262 150C230 110 190 92 130 96"/><path d="M262 150C232 186 192 208 128 210"/><path d="M262 150C290 118 304 96 322 84"/><path d="M262 150C292 180 306 204 320 222"/></g><rect x="0" y="262" width="400" height="38" fill="#000" fill-opacity=".72"/><text x="200" y="287" text-anchor="middle" font-family="sans-serif" font-size="17" fill="#fff">Simulated scan. AI-generated drawing.</text></svg>',
+  );
 
 let memory: Store | null = null;
 function load(): Store {
@@ -94,26 +120,33 @@ function adjusted(u: MockUser, m: Measurement, set: StoredSet): number {
 }
 
 function evaluate(u: MockUser, risk: RiskFactor): RiskEvaluation {
+  // Same rules as the backend's JudgementService, including the officer's count for visual readings.
   const dangerous: { text: string; advice: string }[] = [];
   const abnormal: { text: string; advice: string }[] = [];
   let hasVisual = false;
   for (const id of risk.measurementIds) {
     const m = measurementById.get(id);
     if (!m) continue;
-    if (m.category === 'visual') {
-      hasVisual = true;
-      continue;
-    }
     const history = u.history[id] ?? [];
     if (!history.length) continue;
+    if (m.category === 'visual') {
+      const count = history[history.length - 1].numAbnormal;
+      if (count === null || count === undefined) hasVisual = true;
+      else if (count >= 1) {
+        const finding = { text: `${m.name} shows ${count} ${count === 1 ? 'abnormality' : 'abnormalities'}`, advice: `${m.name} shows abnormalities: review the flagged findings with the Crew Medical Officer.` };
+        (count === 1 ? abnormal : dangerous).push(finding);
+      }
+      continue;
+    }
     const value = adjusted(u, m, history[history.length - 1]);
+    const lim = limitsFor(u, m);
     const label = `${m.name} ${value} ${m.unit ?? ''}`.trim();
     const low = m.lowRecommendation ?? `${m.name} is low: tell the Crew Medical Officer.`;
     const high = m.highRecommendation ?? `${m.name} is high: tell the Crew Medical Officer.`;
-    if (m.dangerousLow !== null && value < m.dangerousLow) dangerous.push({ text: `${label} is in the dangerous low range`, advice: low });
-    else if (m.abnormalLow !== null && value < m.abnormalLow) abnormal.push({ text: `${label} is below the normal range`, advice: low });
-    else if (m.dangerousHigh !== null && value > m.dangerousHigh) dangerous.push({ text: `${label} is in the dangerous high range`, advice: high });
-    else if (m.abnormalHigh !== null && value > m.abnormalHigh) abnormal.push({ text: `${label} is above the normal range`, advice: high });
+    if (lim.dangerousLow !== null && value < lim.dangerousLow) dangerous.push({ text: `${label} is in the dangerous low range`, advice: low });
+    else if (lim.abnormalLow !== null && value < lim.abnormalLow) abnormal.push({ text: `${label} is below the normal range`, advice: low });
+    else if (lim.dangerousHigh !== null && value > lim.dangerousHigh) dangerous.push({ text: `${label} is in the dangerous high range`, advice: high });
+    else if (lim.abnormalHigh !== null && value > lim.abnormalHigh) abnormal.push({ text: `${label} is above the normal range`, advice: high });
   }
   const penalty = dangerous.length * 75 + abnormal.length * 40;
   const all = [...dangerous, ...abnormal];
@@ -137,11 +170,12 @@ function criterionProgress(u: MockUser, c: BadgeCriterion): number {
       if (c.isOk) {
         if (m.category === 'visual') continue;
         const value = adjusted(u, m, set);
+        const lim = limitsFor(u, m);
         const green =
-          !(m.dangerousLow !== null && value < m.dangerousLow) &&
-          !(m.abnormalLow !== null && value < m.abnormalLow) &&
-          !(m.abnormalHigh !== null && value > m.abnormalHigh) &&
-          !(m.dangerousHigh !== null && value > m.dangerousHigh);
+          !(lim.dangerousLow !== null && value < lim.dangerousLow) &&
+          !(lim.abnormalLow !== null && value < lim.abnormalLow) &&
+          !(lim.abnormalHigh !== null && value > lim.abnormalHigh) &&
+          !(lim.dangerousHigh !== null && value > lim.dangerousHigh);
         if (!green) continue;
       }
       times.push(Date.parse(set.timestamp));
@@ -220,76 +254,51 @@ function seedDemo(u: MockUser) {
     if (m.baselineMode && m.baselineMode !== 'none') u.baselines[id] = average(s.values[0]);
     u.freq[id] = s.everyDays;
   }
+  // One eye scan waiting for a medical officer's review.
+  u.history.oct_fundus_scan = [{ timestamp: new Date(now - 26 * 3_600_000).toISOString(), values: null, images: [SIMULATED_SCAN], numAbnormal: null }];
+  u.freq.oct_fundus_scan = 14;
 }
 
-function route(method: string, path: string, body: Record<string, unknown>, params: Record<string, unknown>, authHeader: string | undefined): unknown {
-  const store = load();
-  const seg = path.split('/').filter(Boolean).map(decodeURIComponent);
+function newUser(password: string): MockUser {
+  const u: MockUser = { password, token: crypto.randomUUID(), environment: 'station', status: 'normal', officer: null, freq: {}, history: {}, baselines: {} };
+  for (const m of measurements) u.freq[m.id] = DEFAULT_FREQUENCY;
+  return u;
+}
 
-  if (seg[0] === 'data') {
-    if (seg[1] === 'risks' && seg.length === 2) return risks;
-    if (seg[1] === 'risks') {
-      const risk = risks.find((r) => r.id === seg[2]);
-      if (!risk) throw new HttpError(404, 'Unknown risk');
-      return risk;
-    }
-    if (seg[1] === 'measurements') {
-      const m = measurementById.get(seg[2]);
-      if (!m) throw new HttpError(404, 'Unknown measurement');
-      return m;
-    }
+/** Requests about one user's health data. Used for the signed-in user and, read-only plus scoring, for an officer's crew. */
+function healthData(u: MockUser, username: string, scorer: MockUser, rest: string[], method: string, body: Record<string, unknown>, params: Record<string, unknown>, asOfficer: boolean): unknown {
+  if (rest[0] === 'risks' && rest.length === 1) return risks.map((r) => evaluate(u, r));
+  if (rest[0] === 'risks') {
+    const risk = risks.find((r) => r.id === rest[1]);
+    if (!risk) throw new HttpError(404, 'Unknown risk');
+    return evaluate(u, risk);
   }
-
-  if (seg[0] === 'users' && seg[1] === 'login') {
-    const username = String(body.username ?? '').trim();
-    const password = String(body.password ?? '');
-    if (!username || !password) throw new HttpError(400, 'Username and password are required');
-    if (method === 'post') {
-      if (store[username]) throw new HttpError(409, 'Username already taken');
-      const u: MockUser = { password, token: crypto.randomUUID(), freq: {}, history: {}, baselines: {} };
-      for (const m of measurements) u.freq[m.id] = DEFAULT_FREQUENCY;
-      if (username.toLowerCase().startsWith('demo')) seedDemo(u);
-      store[username] = u;
+  if (rest[0] === 'upcoming') return upcoming(u, Number(params.withinDays ?? 30));
+  if (rest[0] === 'measurements') {
+    const m = measurementById.get(rest[1]);
+    if (!m) throw new HttpError(404, 'Unknown measurement');
+    const history = u.history[m.id] ?? [];
+    if (rest[2] === 'score' && method === 'put') {
+      if (scorer.officer) throw new HttpError(403, 'Only users without an officer can judge images; ask your officer');
+      if (m.category !== 'visual') throw new HttpError(400, 'Only visual measurements can be scored');
+      const count = Number(params.numAbnormal);
+      if (!Number.isInteger(count) || count < 0) throw new HttpError(400, 'numAbnormal cannot be negative');
+      if (!history.length) throw new HttpError(404, `No readings logged for ${m.id}`);
+      const index = params.measurementIndex === undefined ? 0 : Number(params.measurementIndex);
+      if (!Number.isInteger(index) || index < 0 || index >= history.length) throw new HttpError(404, 'Invalid measurement index');
+      history[history.length - 1 - index].numAbnormal = count;
       save();
-      return u.token;
+      return '';
     }
-    const u = store[username];
-    if (!u || u.password !== password) throw new HttpError(401, 'Invalid username or password');
-    return u.token;
-  }
-
-  if (seg[0] === 'users') {
-    if (!authHeader) throw new HttpError(400, 'Missing Authorization header');
-    const token = authHeader.replace(/^Bearer\s+/i, '').trim();
-    const entry = Object.entries(store).find(([, v]) => v.token === token);
-    if (!entry) throw new HttpError(401, 'Invalid token');
-    const [username, u] = entry;
-
-    if (seg[1] === 'risks' && seg.length === 2) return risks.map((r) => evaluate(u, r));
-    if (seg[1] === 'risks') {
-      const risk = risks.find((r) => r.id === seg[2]);
-      if (!risk) throw new HttpError(404, 'Unknown risk');
-      return evaluate(u, risk);
-    }
-    if (seg[1] === 'badges') return evaluateBadges(u);
-    if (seg[1] === 'upcoming') return upcoming(u, Number(params.withinDays ?? 30));
-    if (seg[1] === 'digest') {
-      const monthly = upcoming(u, 30);
-      const within = (days: number) => monthly.filter((r) => Date.parse(String(r.dueDate)) <= Date.now() + days * DAY);
-      return { username, daily: within(1), weekly: within(7), monthly };
-    }
-    if (seg[1] === 'measurements') {
-      const m = measurementById.get(seg[2]);
-      if (!m) throw new HttpError(404, 'Unknown measurement');
-      const history = u.history[m.id] ?? [];
-      if (seg[3] === 'frequency' && method === 'put') {
+    if (!asOfficer) {
+      if (rest[2] === 'frequency' && method === 'put') {
         const days = Number(body.frequencyDays);
         if (!Number.isInteger(days) || days < 1) throw new HttpError(400, 'frequencyDays must be 1 or more');
         u.freq[m.id] = days;
         save();
         return '';
       }
-      if (seg[3] === 'trend') {
+      if (rest[2] === 'trend') {
         if (history.length < 2) return { measurementId: m.id, direction: null };
         const previous = adjusted(u, m, history[history.length - 2]);
         const latest = adjusted(u, m, history[history.length - 1]);
@@ -312,7 +321,7 @@ function route(method: string, path: string, body: Record<string, unknown>, para
           if (typeof body.image !== 'string' || !body.image.trim()) throw new HttpError(400, "Visual measurement requires an 'image'");
           images = [body.image];
         }
-        (u.history[m.id] ??= []).push({ timestamp: new Date().toISOString(), values, images });
+        (u.history[m.id] ??= []).push({ timestamp: new Date().toISOString(), values, images, numAbnormal: null });
         save();
         return '';
       }
@@ -333,15 +342,150 @@ function route(method: string, path: string, body: Record<string, unknown>, para
         save();
         return '';
       }
-      // GET history: newest first, baseline-adjusted.
-      return [...history].reverse().map<MeasurementSet>((set) => ({
-        measurementId: m.id,
-        userId: username,
-        timestamp: set.timestamp,
-        values: set.values ? set.values.map((raw) => change(u, m.id, raw, m.baselineMode) ?? raw) : null,
-        images: set.images,
-      }));
     }
+    if (method !== 'get') throw new HttpError(404, 'Not found');
+    // GET history: newest first, baseline-adjusted.
+    return [...history].reverse().map<MeasurementSet>((set) => ({
+      measurementId: m.id,
+      userId: username,
+      timestamp: set.timestamp,
+      values: set.values ? set.values.map((raw) => change(u, m.id, raw, m.baselineMode) ?? raw) : null,
+      images: set.images,
+      numAbnormal: set.numAbnormal ?? null,
+    }));
+  }
+  throw new HttpError(404, 'Not found');
+}
+
+function route(method: string, path: string, body: Record<string, unknown>, params: Record<string, unknown>, authHeader: string | undefined): unknown {
+  const store = load();
+  const seg = path.split('/').filter(Boolean).map(decodeURIComponent);
+
+  if (seg[0] === 'data') {
+    if (seg[1] === 'risks' && seg.length === 2) return risks;
+    if (seg[1] === 'risks') {
+      const risk = risks.find((r) => r.id === seg[2]);
+      if (!risk) throw new HttpError(404, 'Unknown risk');
+      return risk;
+    }
+    if (seg[1] === 'measurements') {
+      const m = measurementById.get(seg[2]);
+      if (!m) throw new HttpError(404, 'Unknown measurement');
+      if (seg[3] === 'flags') {
+        if (m.category !== 'visual') throw new HttpError(400, `Measurement ${m.id} is not a visual measurement`);
+        return flagsById.get(m.id) ?? [];
+      }
+      return m;
+    }
+  }
+
+  if (seg[0] === 'users' && seg[1] === 'login') {
+    const username = String(body.username ?? '').trim();
+    const password = String(body.password ?? '');
+    if (!username || !password) throw new HttpError(400, 'Username and password are required');
+    if (method === 'post') {
+      if (store[username]) throw new HttpError(409, 'Username already taken');
+      const u = newUser(password);
+      const lower = username.toLowerCase();
+      if (lower.startsWith('demo')) seedDemo(u);
+      if (lower.startsWith('cmo')) {
+        // Demo medical officer: comes with two simulated crew members already assigned.
+        u.status = 'medical officer';
+        ['crew-ada', 'crew-ben'].forEach((suffix, i) => {
+          const crewName = `${username}-${suffix}`;
+          if (store[crewName]) return;
+          const crew = newUser('demo');
+          seedDemo(crew);
+          crew.officer = username;
+          crew.environment = i === 0 ? 'moon' : 'mars';
+          if (i === 1) {
+            // The second crew member is behind on checks and has one reading in the act-now range.
+            for (const sets of Object.values(crew.history)) for (const set of sets) set.timestamp = new Date(Date.parse(set.timestamp) - 5 * DAY).toISOString();
+            crew.history.resting_heart_rate.push({ timestamp: new Date(Date.now() - 2 * DAY).toISOString(), values: [128], images: null });
+          }
+          store[crewName] = crew;
+        });
+      }
+      store[username] = u;
+      save();
+      return u.token;
+    }
+    const u = store[username];
+    if (!u || u.password !== password) throw new HttpError(401, 'Invalid username or password');
+    return u.token;
+  }
+
+  if (seg[0] === 'users') {
+    if (!authHeader) throw new HttpError(400, 'Missing Authorization header');
+    const token = authHeader.replace(/^Bearer\s+/i, '').trim();
+    const entry = Object.entries(store).find(([, v]) => v.token === token);
+    if (!entry) throw new HttpError(401, 'Invalid token');
+    const [username, u] = entry;
+    const crewOf = (officerName: string) => Object.entries(store).filter(([, v]) => v.officer === officerName);
+    const lastTaken = (v: MockUser) => {
+      const times = Object.values(v.history).flatMap((sets) => sets.map((set) => Date.parse(set.timestamp)));
+      return times.length ? new Date(Math.max(...times)).toISOString() : null;
+    };
+
+    if (seg[1] === 'environment') {
+      if (method === 'put') {
+        const next = String(params.newEnvironment ?? '').toLowerCase();
+        if (!ENVIRONMENTS.includes(next)) throw new HttpError(400, `Unknown environment: ${String(params.newEnvironment)}`);
+        u.environment = next;
+        save();
+        return '';
+      }
+      return u.environment;
+    }
+    if (seg[1] === 'status') {
+      if (method === 'put') {
+        const next = String(params.newStatus ?? '').trim().toLowerCase();
+        if (next !== 'normal' && next !== 'medical officer') throw new HttpError(400, `Unknown status: ${String(params.newStatus)}`);
+        if (u.officer || crewOf(username).length) throw new HttpError(409, 'The status cannot change while the user has an officer or children');
+        u.status = next;
+        save();
+        return '';
+      }
+      return u.status;
+    }
+    if (seg[1] === 'officer') {
+      if (method === 'put') {
+        const name = String(params.newOfficer ?? '').trim();
+        if (!name) throw new HttpError(400, 'An officer username is required');
+        const target = store[name];
+        if (!target) throw new HttpError(404, `Unknown officer: ${name}`);
+        if (name === username) throw new HttpError(409, 'A user cannot be their own officer');
+        if (u.status === 'medical officer' || target.officer) throw new HttpError(409, 'Officers cannot have an officer');
+        if (target.status !== 'medical officer') throw new HttpError(409, `Only medical officers can take children: ${name} is a normal user`);
+        u.officer = name;
+        save();
+        return '';
+      }
+      return u.officer ?? 'null';
+    }
+    if (seg[1] === 'children' && seg.length === 2) {
+      return crewOf(username).map<ChildOverview>(([name, v]) => ({ userId: name, username: name, latestMeasurement: lastTaken(v) }));
+    }
+    if (seg[1] === 'children') {
+      const child = store[seg[2]];
+      if (!child) throw new HttpError(404, `Unknown child: ${seg[2]}`);
+      if (child.officer !== username) throw new HttpError(403, 'This user is not your child');
+      return healthData(child, seg[2], u, seg.slice(3), method, body, params, true);
+    }
+    if (seg[1] === 'overdue') {
+      if (u.status !== 'medical officer') throw new HttpError(403, 'Only officers can list overdue measurements');
+      const now = Date.now();
+      return crewOf(username)
+        .flatMap(([name, v]) => upcoming(v, 0).filter((r) => Date.parse(String(r.dueDate)) <= now).map<ChildReminder>((r) => ({ childId: name, measurementId: r.measurementId, dueDate: r.dueDate })))
+        .sort((a, b) => Date.parse(String(a.dueDate)) - Date.parse(String(b.dueDate)));
+    }
+    if (seg[1] === 'badges') return evaluateBadges(u);
+    if (seg[1] === 'digest') {
+      const monthly = upcoming(u, 30);
+      const within = (days: number) => monthly.filter((r) => Date.parse(String(r.dueDate)) <= Date.now() + days * DAY);
+      return { username, daily: within(1), weekly: within(7), monthly };
+    }
+    return healthData(u, username, u, seg.slice(1), method, body, params, false);
   }
   throw new HttpError(404, 'Not found');
 }

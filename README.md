@@ -46,7 +46,8 @@ browser requests from `http://localhost:5173`, so the dev server is pinned to th
 Set `VITE_USE_MOCKS=true` in `.env.local`. The app then answers its own requests with simulated
 data that follows the backend's rules and is saved in the browser. Create any account to start
 empty, or create an account whose username starts with `demo` to get three weeks of simulated
-readings. A bar at the top of every screen says that the data is simulated.
+readings. A username that starts with `cmo` creates a medical officer with two simulated crew
+members already assigned (`<name>-crew-ada` and `<name>-crew-ben`). A bar at the top of every screen says that the data is simulated.
 
 ## How it is organized
 
@@ -62,9 +63,9 @@ src/
   components/  status chips, body figure, step drawings, trend chart, prompts, change history,
                gamification, layout
   pages/       Login, Home, Reminders, Risk, Measurement Overview, Measurement Performance,
-               Summary (Crew Medical Officer), Profile, Info
+               Summary (Crew Medical Officer), Crew (medical officers), Profile, Info
   mocks/       copies of the backend's data files and of badges.json, used only in demo mode
-  styles/      one global stylesheet with design tokens (light and dark)
+  styles/      tokens.css (every colour and font, light and dark), base.css, global.css
 ```
 
 Nothing about risks or measurements is hardcoded in the screens. The lists, ids, ranges,
@@ -84,7 +85,10 @@ instructions and recommendations come from the backend, and every URL is built f
 | Measurement Performance | `GET /data/measurements/{id}`, `POST /users/measurements/{id}` |
 | Edit a reading | `POST /users/measurements/{id}` (the corrected reading), then `DELETE /users/measurements/{id}?measurementIndex=N` (the old one) |
 | Summary | The same endpoints as Home |
-| Profile, Info | None (see "Kept in the browser" below) |
+| Scan review (OCT fundus scan) | `GET /data/measurements/{id}/flags` (the checklist), `PUT /users/measurements/{id}/score?numAbnormal=N&measurementIndex=I` (crew member without a medical officer) |
+| Profile | `GET`/`PUT /users/environment`, `GET`/`PUT /users/status`, `GET`/`PUT /users/officer` |
+| Crew (medical officers) | `GET /users/children`, `GET /users/overdue`, `GET /users/children/{id}/risks`, `GET /users/children/{id}/measurements/{mid}`, `GET /users/children/{id}/upcoming`, `PUT /users/children/{id}/measurements/{mid}/score` |
+| Info | None |
 
 ### What the app adds on top of the spec below
 
@@ -118,7 +122,18 @@ instructions and recommendations come from the backend, and every URL is built f
   surgeon step, the evacuation note, and any healthy ranges that differ (see below).
 - **Crew Medical Officer summary:** one page with red flags, every risk, the latest reading of
   every measurement (GMT) and recent changes. It can be printed.
-- **Profile page:** account facts, the environment setting and the change history.
+- **Profile page:** account facts, the environment setting, the role (crew member or medical
+  officer), the medical officer's username, and the change history.
+- **Scan review ("image analysis"):** the backend scores a scan by the number of findings a
+  person sees on its checklist (0 healthy, 1 watch, 2 or more act now). No AI looks at the
+  image. A crew member without a medical officer reviews their own scans; once a medical officer
+  is named, only that officer can review them. An unreviewed scan shows "Awaiting review".
+- **Medical officer role:** an account can switch to medical officer on the Profile page (the
+  backend refuses while it has an officer or crew). A crew member names their officer by
+  username; the backend has no way to remove an officer again. Medical officers get a Crew page:
+  every assigned crew member with their act-now and watch risks, overdue checks across the crew,
+  and each crew member's full summary with scan review. The backend does not share a crew
+  member's environment, change history or extreme-reading alerts with the officer.
 - **Info page:** how the app works, why the exams are needed, the environments, and the AI
   disclosure.
 - **Motivation:** mission readiness score, check-in streak, weekly progress bar and badges.
@@ -129,10 +144,12 @@ instructions and recommendations come from the backend, and every URL is built f
 
 ### Kept in the browser, because the backend has no place for it
 
-The backend is not changed by this front end. Three things it does not store are kept in the
-browser's local storage, per account, so they do not follow the account to another device:
+The backend is not changed by this front end. The mission environment is saved on the backend;
+the browser only remembers that a choice was made (`chm.environment.<username>`), so a new
+account is asked once. Things the backend does not store are kept in the browser's local storage,
+per account, so they do not follow the account to another device:
 
-- the mission environment (`chm.environment.<username>`),
+- the extreme-reading alerts (`chm.alerts.<username>`),
 - the change history (`chm.changes.<username>`, newest 300 entries),
 - the reminder frequency last chosen (`chm.frequency.<username>.<measurementId>`), because the
   backend has no endpoint to read the current frequency back.
@@ -149,7 +166,7 @@ sends one set of limits, that set is used. The team's ranges guide gives the sam
 five environments for the 15 measurements the backend tracks today. The four ranges that do
 differ (blood oxygen, solar storm dose, daily exercise time, dust irritation) are not tracked by
 the backend yet, so they are shown on the Profile and Info pages and used in the advice text.
-Risk scores are worked out by the backend and do not depend on the environment.
+Risk scores are worked out by the backend with the ranges of the environment saved there.
 
 ### Instruction images
 
@@ -162,7 +179,8 @@ names, it is shown instead, with an "AI-generated" label on top. See
 
 The app type-checks, builds, and every screen and flow was exercised in a browser in demo mode.
 It has **not yet been run against the live Spring backend**, so do one pass with the backend
-running before the demo (log in, log one measurement, change one reminder frequency).
+running before the demo (log in, log one measurement, change one reminder frequency, switch one
+account to medical officer, name it as another account's officer, and review a scan).
 
 ## Sources
 
@@ -177,7 +195,7 @@ running before the demo (log in, log one measurement, change one reminder freque
 - Canadian Space Agency, Bio-Monitor: https://www.asc-csa.gc.ca/eng/sciences/bio-monitor.asp
 
 Open-source software used (all MIT licensed unless noted): React, Vite, React Router, TanStack
-Query, axios, Recharts; Roboto Flex and Roboto Mono fonts (SIL Open Font License / Apache 2.0).
+Query, axios, Recharts; Chivo Mono font by Omnibus-Type (SIL Open Font License 1.1).
 
 This is a hackathon prototype for education and demonstration. It is not a medical device and
 does not give medical advice.

@@ -3,14 +3,16 @@ import type { ReactNode } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { USE_MOCKS, errorMessage } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
+import { useStatus } from '../../hooks/queries';
 import { Icon } from '../status/Status';
 
-/** Original app mark: a pulse line in a rounded square. Not based on any agency logo or insignia. */
+/** Original app mark: a pulse line on a square ink plate, with a cobalt reading point. Not based on any agency logo or insignia. */
 export function AppMark({ size = 28 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
-      <rect width="32" height="32" rx="8" fill="var(--accent)" />
-      <path d="M5 17h6l2.5-7 4 13 2.5-6H27" fill="none" stroke="var(--on-accent)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+      <rect width="32" height="32" fill="var(--color-ink)" />
+      <path d="M4 18h6l2.5-8 4 14 2.5-6H22" fill="none" stroke="var(--color-paper)" strokeWidth="2.4" strokeLinecap="square" strokeLinejoin="miter" />
+      <rect x="23" y="15" width="5" height="5" fill="var(--color-accent)" />
     </svg>
   );
 }
@@ -18,6 +20,9 @@ export function AppMark({ size = 28 }: { size?: number }) {
 export function AppShell({ children }: { children: ReactNode }) {
   const { token, username, logout } = useAuth();
   const navigate = useNavigate();
+  // Medical officers get a Crew page. The role comes from the backend.
+  const status = useStatus(!!token);
+  const isOfficer = !!token && status.data === 'medical officer';
   return (
     <div className="shell">
       <a className="skip-link" href="#main">
@@ -35,6 +40,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </NavLink>
             <NavLink to="/reminders">Reminders</NavLink>
             <NavLink to="/summary">Summary</NavLink>
+            {isOfficer && <NavLink to="/crew">Crew</NavLink>}
             <NavLink to="/info">Info</NavLink>
             <NavLink to="/profile">Profile</NavLink>
           </nav>
@@ -85,8 +91,8 @@ export function PageHeader({ title, eyebrow, back, children }: { title: string; 
           <Icon name="back" size={16} /> {back.label}
         </Link>
       )}
-      {eyebrow && <span className="eyebrow">{eyebrow}</span>}
       <h1>{title}</h1>
+      {eyebrow && <span className="page-sub">{eyebrow}</span>}
       {children}
     </div>
   );

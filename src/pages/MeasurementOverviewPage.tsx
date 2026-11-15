@@ -1,6 +1,7 @@
 // AI-generated code (Claude by Anthropic), reviewed by team VNK. See AI_DISCLOSURE.md.
 // Measurement overview: chart (or image history) with a plain trend sentence, why the exam matters,
 // reminder frequency, a log of saved readings that can be deleted, and a button to take the measurement.
+import { ScanReview } from '../components/scans/ScanReview';
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { Measurement, MeasurementSet, TrendDirection } from '../api/types';
@@ -13,11 +14,11 @@ import { TrendChart } from '../components/measurement/TrendChart';
 import { ZoneChip } from '../components/status/Status';
 import { measurementExplainer } from '../content/explainers';
 import { displayUnit, formatValue, usesBaseline } from '../content/inputSpecs';
-import { useDeleteMeasurement, useHistory, useMeasurement, useSetFrequency, useTrend, useUpcoming } from '../hooks/queries';
+import { useDeleteMeasurement, useHistory, useMeasurement, useOfficer, useSetFrequency, useTrend, useUpcoming } from '../hooks/queries';
 import type { ChangeEntry } from '../lib/changeLog';
 import { DAY, describeDue, formatDateTime, toMillis } from '../lib/dates';
 import { environmentNotes } from '../lib/environment';
-import { ZONE_LABEL, classify, latestSet, setValue, sortOldestFirst } from '../lib/zones';
+import { ZONE_LABEL, classify, latestSet, setValue, sortOldestFirst, reviewText } from '../lib/zones';
 
 const FREQUENCIES = [1, 2, 3, 7, 14, 30];
 /** The backend reminds every 7 days until a frequency is set. */
@@ -44,7 +45,7 @@ function trendSentence(m: Measurement, history: MeasurementSet[], direction: Tre
   const latest = latestSet(history);
   const value = latest ? setValue(latest) : null;
   if (!latest) return 'No readings yet. Your trend appears after your first two readings.';
-  if (m.category === 'visual' || value === null) return `You have saved ${history.length} image${history.length === 1 ? '' : 's'}. Images are not scored by the app yet; the Crew Medical Officer reviews them.`;
+  if (m.category === 'visual' || value === null) return `You have saved ${history.length} scan${history.length === 1 ? '' : 's'}. A scan is scored when a medical officer reviews it: no findings is healthy, one is watch, two or more is act now.`;
   const { zone, side } = classify(value, m);
   const where = zone === 'green' ? 'in the healthy range' : `${side === 'low' ? 'below' : 'above'} the healthy range (${ZONE_LABEL[zone].toLowerCase()})`;
   const base = `Your latest reading is ${formatValue(value)} ${displayUnit(m)}, ${where}.`;
@@ -163,6 +164,7 @@ export function MeasurementOverviewPage() {
   const trend = useTrend(measurementId);
   const upcoming = useUpcoming(60);
   const setFrequency = useSetFrequency(measurementId);
+  const officerName = useOfficer();
   const { environment } = useEnvironment();
   // The choice is remembered on this device, because the backend has no call that returns it.
   const [chosenFrequency, setChosenFrequency] = useState<number | null>(() => loadFrequency(measurementId));
@@ -190,14 +192,14 @@ export function MeasurementOverviewPage() {
     <div className="page narrow has-bottom-bar">
       <PageHeader title={m.name} eyebrow={explainer.plainName ?? 'Measurement'} back={{ to: '/', label: 'Home' }}>
         <div className="chips">
-          {m.category === 'visual' ? <span className="chip zone-none">Image, not scored yet</span> : <ZoneChip zone={zone} label={zone === 'none' ? 'Not taken yet' : undefined} />}
+          <ZoneChip zone={zone} label={m.category === 'visual' ? (sets.length ? reviewText(latestSet(sets)) : 'Not taken yet') : zone === 'none' ? 'Not taken yet' : undefined} />
           {due && <span className="chip">{latest ? describeDue(toMillis(due.dueDate)).text : 'First reading due'}</span>}
         </div>
       </PageHeader>
 
       <section className="card" aria-label="Your readings over time">
         <div className="section-head">
-          <h2>{m.category === 'visual' ? 'Your saved images' : 'Your readings over time'}</h2>
+          <h2>{m.category === 'visual' ? 'Your scans and their review' : 'Your readings over time'}</h2>
           {m.category === 'numerical' && <span className="muted small">{displayUnit(m)}</span>}
         </div>
         {m.category === 'visual' ? (
@@ -206,14 +208,7 @@ export function MeasurementOverviewPage() {
               <p>No images yet. Take this measurement once and your images appear here, newest first.</p>
             </div>
           ) : (
-            <ul className="image-strip">
-              {images.map(({ img, t }) => (
-                <li key={t}>
-                  <img src={img.startsWith('data:') ? img : `data:image/jpeg;base64,${img}`} alt={`${m.name} saved ${formatDateTime(t)}`} />
-                  <span className="muted small">{formatDateTime(t)}</span>
-                </li>
-              ))}
-            </ul>
+            <ScanReview measurement={m} sets={sets} reviewer={officerName.data ? 'blocked' : 'self'} officerName={officerName.data} />
           )
         ) : (
           <TrendChart measurement={m} history={sets} />

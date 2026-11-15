@@ -6,8 +6,8 @@ import { useEnvironment } from '../auth/EnvironmentContext';
 import { displayUnit, formatValue, usesBaseline } from '../content/inputSpecs';
 import { recordChange, type ChangeAction, type ChangeEntry } from '../lib/changeLog';
 import { withEnvironmentLimits } from '../lib/environment';
-import { data, user } from '../api/endpoints';
-import type { LogMeasurementRequest, Measurement, MeasurementSet, Reminder, RiskEvaluation, RiskFactor } from '../api/types';
+import { data, officer, user } from '../api/endpoints';
+import type { LogMeasurementRequest, Measurement, MeasurementSet, Reminder, RiskEvaluation, RiskFactor, UserStatus } from '../api/types';
 import { measurementZone, scoreZone, setValue, worstZone, type Zone } from '../lib/zones';
 
 const STATIC = { staleTime: Infinity, gcTime: Infinity };
@@ -146,6 +146,49 @@ export function useSetFrequency(measurementId: string) {
   });
 }
 
+/** "normal" or "medical officer" (GET /users/status). */
+export const useStatus = (enabled = true) => useQuery({ queryKey: ['status'], queryFn: user.getStatus, enabled });
+/** Username of the crew member's medical officer, or null. */
+export const useOfficer = () => useQuery({ queryKey: ['officer'], queryFn: user.getOfficer });
+/** The crew assigned to this medical officer. */
+export const useChildren = (enabled: boolean) => useQuery({ queryKey: ['children'], queryFn: officer.getChildren, enabled });
+/** Overdue checks across the assigned crew. */
+export const useCrewOverdue = (enabled: boolean) => useQuery({ queryKey: ['crewOverdue'], queryFn: officer.getOverdue, enabled });
+/** The checklist of findings for a visual measurement. */
+export const useFlags = (measurementId: string) => useQuery({ queryKey: ['flags', measurementId], queryFn: () => data.getFlags(measurementId), ...STATIC });
+
+const ROLE_KEYS = [['status'], ['officer'], ['children'], ['crewOverdue']];
+
+export function useSetStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (status: UserStatus) => user.setStatus(status),
+    onSuccess: () => Promise.all(ROLE_KEYS.map((queryKey) => queryClient.invalidateQueries({ queryKey }))),
+  });
+}
+
+export function useSetOfficer() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (username: string) => user.setOfficer(username),
+    onSuccess: () => Promise.all(ROLE_KEYS.map((queryKey) => queryClient.invalidateQueries({ queryKey }))),
+  });
+}
+
+/**
+ * Saves a medical officer's review of one scan: the number of findings. With a childId it goes
+ * through the officer endpoint for that crew member, otherwise it scores the signed-in user's own scan.
+ */
+export function useScoreScan(measurementId: string, childId?: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ index, numAbnormal }: { index: number; numAbnormal: number }) =>
+      childId ? officer.setScore(childId, measurementId, numAbnormal, index) : user.setScore(measurementId, numAbnormal, index),
+    // A review changes the scan's history entry and every risk score that uses it.
+    onSuccess: () => Promise.all([['history', measurementId], ['riskScores'], ['riskScore'], ['badges']].map((queryKey) => queryClient.invalidateQueries({ queryKey }))),
+  });
+}
+
 export interface RiskView {
   factor: RiskFactor;
   evaluation: RiskEvaluation | undefined;
@@ -170,12 +213,15 @@ export interface Dashboard {
 /**
  * Everything the Home, Reminders and Risk screens need, joined by backend ids. Measurement ids are
  * discovered from the risk factors and the reminder list, so nothing is hardcoded.
+ * With a childId, a medical officer gets the same picture of an assigned crew member, read through
+ * the /users/children/{id}/... endpoints.
  */
-export function useDashboard(): Dashboard {
+export function useDashboard(childId?: string): Dashboard {
   const { environment } = useEnvironment();
   const factors = useRiskFactors();
-  const scores = useRiskScores();
-  const upcoming = useUpcoming(30);
+  const who = childId ?? 'me';
+  const scores = useQuery({ queryKey: ['riskScores', who], queryFn: () => (childId ? officer.getRiskScores(childId) : user.getRiskScores()) });
+  const upcoming = useQuery({ queryKey: ['upcoming', 30, who], queryFn: () => (childId ? officer.getUpcoming(childId, 30) : user.getUpcoming(30)) });
 
   const measurementIds = useMemo(() => {
     const ids = new Set<string>();
@@ -188,7 +234,7 @@ export function useDashboard(): Dashboard {
     queries: measurementIds.map((id) => ({ queryKey: ['measurement', id], queryFn: () => data.getMeasurement(id), ...STATIC })),
   });
   const hists = useQueries({
-    queries: measurementIds.map((id) => ({ queryKey: ['history', id], queryFn: () => user.getHistory(id) })),
+    queries: measurementIds.map((id) => ({ queryKey: childId ? ['history', id, childId] : ['history', id], queryFn: () => (childId ? officer.getHistory(childId, id) : user.getHistory(id)) })),
   });
 
   const defsData = defs.map((q) => q.data);

@@ -6,7 +6,7 @@ import type { Instruction, Measurement, MeasurementSet, TrendDirection } from '.
 import { measurementExplainer } from '../../content/explainers';
 import { displayUnit, formatValue } from '../../content/inputSpecs';
 import { describeDue } from '../../lib/dates';
-import { latestSet, setValue, type Zone } from '../../lib/zones';
+import { latestSet, reviewText, setValue, type Zone } from '../../lib/zones';
 import { AiMark, Icon, ZoneChip } from '../status/Status';
 import { StepArt } from './StepArt';
 
@@ -40,7 +40,7 @@ export function MeasurementRow({ id, measurement, history, zone, dueMs, trend }:
             {trend && <Icon name={trend} size={14} />}
           </span>
         )}
-        {measurement?.category === 'visual' && !neverTaken ? <span className="chip zone-none">Not scored</span> : <ZoneChip zone={zone} label={neverTaken ? 'Not taken yet' : undefined} />}
+        <ZoneChip zone={zone} label={neverTaken ? 'Not taken yet' : measurement?.category === 'visual' ? reviewText(latest) : undefined} />
         {due && <span className={`due${due.overdue ? ' overdue' : ''}`}>{neverTaken ? 'First reading due' : due.text}</span>}
         <Icon name="chevron" size={16} />
       </div>
@@ -82,7 +82,7 @@ export function InstructionSteps({ measurementId, instructions }: { measurementI
           <li key={i} className={`instruction${isDone ? ' done' : ''}`}>
             <StepIllustration measurementId={measurementId} step={i + 1} src={instruction.image} text={instruction.text} />
             <div className="instruction-body">
-              <span className="eyebrow">Step {i + 1} of {instructions.length}</span>
+              <span className="label">Step {i + 1} of {instructions.length}</span>
               <p>{instruction.text}</p>
               <label className="check-row">
                 <input type="checkbox" checked={isDone} onChange={(e) => setDone(e.target.checked ? [...done, i] : done.filter((d) => d !== i))} />

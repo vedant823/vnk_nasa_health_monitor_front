@@ -27,7 +27,7 @@ const LIBRARIES = [
   { name: 'TanStack Query', url: 'https://tanstack.com/query/latest', license: 'MIT' },
   { name: 'axios', url: 'https://axios-http.com/', license: 'MIT' },
   { name: 'Recharts', url: 'https://recharts.org/', license: 'MIT' },
-  { name: 'Roboto Flex and Roboto Mono fonts', url: 'https://fonts.google.com/specimen/Roboto+Flex', license: 'SIL Open Font License / Apache 2.0' },
+  { name: 'Chivo Mono font by Omnibus-Type', url: 'https://fonts.google.com/specimen/Chivo+Mono', license: 'SIL Open Font License 1.1' },
 ];
 
 const HOW_IT_WORKS: { title: string; text: string }[] = [
@@ -40,6 +40,8 @@ const HOW_IT_WORKS: { title: string; text: string }[] = [
   { title: 'Fix mistakes', text: 'Right after saving you can press Undo. On a measurement page you can edit or delete any saved reading. Every edit, undo and delete is written to the change history with the date and time in GMT and what changed.' },
   { title: 'Stay on schedule', text: 'The Reminders page lists what is due today, this week and this month. Each measurement page lets you set how many days pass between reminders. A banner on Home tells you when a check is due. If you miss it, the reminder grows: a pop-up after a day, then a missed-check flag on the Crew Medical Officer summary after three days. It moves faster when the last reading was in the watch or act-now range.' },
   { title: 'Extreme readings', text: 'If a reading is far past its act-now limit, the app prepares a packet for the Crew Medical Officer and tells you the ground crew will be notified in 5 minutes unless you undo the reading. In this prototype that notification is simulated: nothing leaves the device.' },
+  { title: 'Get your scans reviewed', text: 'An eye scan is scored by a person, not by AI. The reviewer ticks every finding they can see on a checklist: none is healthy, one is watch, two or more is act now. Your medical officer reviews your scans. If you have no medical officer, you review your own.' },
+  { title: 'Work as a medical officer', text: 'On the Profile page an account can become a medical officer, and a crew member can name their medical officer by username. A medical officer gets a Crew page with every assigned crew member, their risks, overdue checks and scans to review.' },
   { title: 'Earn badges', text: 'Regular check-ins build a streak, fill the weekly bar and earn badges. They are there to make a daily habit easier to keep.' },
   { title: 'Share with the Crew Medical Officer', text: 'The Crew Medical Officer summary puts all risks, latest readings, red flags and recent changes on one page that can be printed or read out.' },
 ];
@@ -136,10 +138,15 @@ export function AboutPage() {
             </tr>
             <tr>
               <td>Images and illustrations</td>
-              <td>The body outline and the picture for every measurement step were drawn by AI as simple vector shapes. No photos and no third-party artwork are used.</td>
+              <td>The body outline, the picture for every measurement step, the app mark and the stand-in eye scan used in demo mode were drawn by AI as simple vector shapes. No photos and no third-party artwork are used.</td>
               <td>
                 Every one carries a visible watermark like this: <span className="inline-mark"><AiMark /></span>
               </td>
+            </tr>
+            <tr>
+              <td>Visual design</td>
+              <td>The layout, colours and type were designed by AI with a design checklist, then reviewed by the team. The typeface is Chivo Mono, an open-source font.</td>
+              <td>Comments in the style files and AI_DISCLOSURE.md.</td>
             </tr>
             <tr>
               <td>Explainer text</td>
@@ -195,7 +202,7 @@ export function AboutPage() {
       <section className="card">
         <h2>Your data</h2>
         <p>
-          Readings are stored by the mission's health system (the team's backend). This browser only keeps your sign-in token, your chosen environment, the change history, your reminder choices and which badges you have already seen.
+          Readings are stored by the mission's health system (the team's backend). Your environment, role and medical officer are stored there too. This browser only keeps your sign-in token, a note that you chose an environment, the change history, extreme-reading alerts, your reminder choices and which badges you have already seen.
           Logging out removes the token from this device.
         </p>
       </section>

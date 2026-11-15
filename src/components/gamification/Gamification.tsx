@@ -19,7 +19,7 @@ export function HomeStrip({ readiness, zone, streak, week, baseline }: StripProp
       <div className="card strip-card readiness">
         <ScoreRing score={readiness} zone={zone} size={104} />
         <div>
-          <span className="eyebrow">Mission readiness</span>
+          <span className="label">Mission readiness</span>
           {readiness === null ? (
             <>
               <p className="strip-big">Start your baseline</p>
@@ -38,7 +38,7 @@ export function HomeStrip({ readiness, zone, streak, week, baseline }: StripProp
       <div className="card strip-card">
         <span className="strip-icon flame"><Icon name="flame" size={26} /></span>
         <div>
-          <span className="eyebrow">Check-in streak</span>
+          <span className="label">Check-in streak</span>
           <p className="strip-big">
             <span className="num">{streak}</span> day{streak === 1 ? '' : 's'}
           </p>
@@ -47,7 +47,7 @@ export function HomeStrip({ readiness, zone, streak, week, baseline }: StripProp
       </div>
       <div className="card strip-card milestone">
         <div className="milestone-head">
-          <span className="eyebrow">Wellness milestone: this week</span>
+          <span className="label">Wellness milestone: this week</span>
           <span className="num">
             {week.done} of {week.total}
           </span>

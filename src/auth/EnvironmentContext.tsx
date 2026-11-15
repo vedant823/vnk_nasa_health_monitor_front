@@ -1,13 +1,18 @@
 // AI-generated code (Claude by Anthropic), reviewed by team VNK. See AI_DISCLOSURE.md.
 // The crew member's mission environment. A new account must pick one before using the app, and it
-// can be changed later on the Profile page. It is stored in this browser per account because the
-// backend has no place for it.
+// can be changed later on the Profile page. The backend stores it (GET and PUT /users/environment)
+// and scores risks with that environment's ranges. This browser only remembers that a choice was made.
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { errorMessage } from '../api/client';
+import { user } from '../api/endpoints';
+import { Loading } from '../components/layout/AppShell';
 import { AppMark } from '../components/layout/AppShell';
 import {
   ENVIRONMENTS,
   commDelayText,
   environmentById,
+  isEnvironmentId,
   loadEnvironment,
   rangeDifferences,
   saveEnvironment,
@@ -22,22 +27,51 @@ interface EnvironmentState {
   /** The chosen environment, or the space station while nothing is chosen. */
   environment: Environment;
   choose: (id: EnvironmentId) => void;
+  /** False while the backend's answer is still loading. */
+  ready: boolean;
+  /** Set when the last change could not be saved on the backend. */
+  saveError: string | null;
 }
 
 const EnvironmentContext = createContext<EnvironmentState | null>(null);
 
 export function EnvironmentProvider({ children }: { children: ReactNode }) {
-  const { username } = useAuth();
-  const [chosen, setChosen] = useState<EnvironmentId | null>(() => loadEnvironment(username));
-  useEffect(() => setChosen(loadEnvironment(username)), [username]);
+  const { username, token } = useAuth();
+  const queryClient = useQueryClient();
+  // What this browser remembers: that the crew member picked, and what they picked.
+  const [picked, setPicked] = useState<EnvironmentId | null>(() => loadEnvironment(username));
+  const [saveError, setSaveError] = useState<string | null>(null);
+  useEffect(() => {
+    setPicked(loadEnvironment(username));
+    setSaveError(null);
+  }, [username]);
+
+  const server = useQuery({ queryKey: ['environment', username], queryFn: user.getEnvironment, enabled: !!token && !!username, staleTime: Infinity });
+  const fromServer = isEnvironmentId(server.data) ? server.data : null;
+  // The backend starts every account on the space station. Anything else means a choice was made
+  // (maybe on another device), so the account is not asked again.
+  const chosen: EnvironmentId | null = picked !== null ? (fromServer ?? picked) : fromServer !== null && fromServer !== 'station' ? fromServer : null;
+
   const choose = useCallback(
     (id: EnvironmentId) => {
       saveEnvironment(username, id);
-      setChosen(id);
+      setPicked(id);
+      setSaveError(null);
+      const previous = queryClient.getQueryData(['environment', username]);
+      queryClient.setQueryData(['environment', username], id);
+      user
+        .setEnvironment(id)
+        // Risk scores and badges are worked out with the environment's ranges, so reload everything.
+        .then(() => queryClient.invalidateQueries())
+        .catch((error: unknown) => {
+          queryClient.setQueryData(['environment', username], previous);
+          setSaveError(`Your environment could not be saved. ${errorMessage(error)}`);
+        });
     },
-    [username],
+    [username, queryClient],
   );
-  const value = useMemo(() => ({ chosen, environment: environmentById(chosen), choose }), [chosen, choose]);
+  const ready = !token || !server.isLoading;
+  const value = useMemo(() => ({ chosen, environment: environmentById(chosen), choose, ready, saveError }), [chosen, choose, ready, saveError]);
   return <EnvironmentContext.Provider value={value}>{children}</EnvironmentContext.Provider>;
 }
 
@@ -78,7 +112,6 @@ function EnvironmentSetup() {
         <div className="login-brand">
           <AppMark size={40} />
           <div>
-            <span className="eyebrow">One question before you start</span>
             <h1 id="env-title">Where are you on this mission, {username}?</h1>
           </div>
         </div>
@@ -100,6 +133,6 @@ function EnvironmentSetup() {
 
 /** Signed in, and an environment has been chosen. */
 export function Protected({ children }: { children: ReactNode }) {
-  const { chosen } = useEnvironment();
-  return <RequireAuth>{chosen === null ? <EnvironmentSetup /> : children}</RequireAuth>;
+  const { chosen, ready } = useEnvironment();
+  return <RequireAuth>{!ready ? <Loading /> : chosen === null ? <EnvironmentSetup /> : children}</RequireAuth>;
 }

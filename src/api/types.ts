@@ -60,7 +60,10 @@ export interface MeasurementSet {
   /** ISO 8601 string from the backend (epoch numbers are also accepted by lib/dates). */
   timestamp: string | number;
   values: number[] | null;
+  /** Visual readings: the stored picture, as bare base64 JPEG (the backend compresses every upload). */
   images: string[] | null;
+  /** Visual readings: how many checklist findings the medical officer saw. Null or missing = not reviewed yet. */
+  numAbnormal?: number | null;
 }
 
 export interface Reminder {
@@ -115,4 +118,21 @@ export interface BadgeStatus {
 export interface BadgeSet {
   earned: BadgeRule[];
   unearned: BadgeStatus[];
+}
+
+/** The crew member's role on the backend. A medical officer reviews the crew assigned to them. */
+export type UserStatus = 'normal' | 'medical officer';
+
+/** One crew member assigned to a medical officer (GET /users/children). */
+export interface ChildOverview {
+  userId: string;
+  username: string;
+  latestMeasurement: string | number | null;
+}
+
+/** One overdue check of an assigned crew member (GET /users/overdue). */
+export interface ChildReminder {
+  childId: string;
+  measurementId: string;
+  dueDate: string | number;
 }

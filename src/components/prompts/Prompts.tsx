@@ -63,8 +63,8 @@ export function DuePromptDialog({ check }: { check: MissedCheck }) {
   return (
     <div className="scrim" role="dialog" aria-modal="true" aria-labelledby="due-title">
       <div className={`dialog due-dialog${flagged ? ' flagged' : ''}`}>
-        <span className="eyebrow">{flagged ? 'Reminder step 3 of 3' : 'Reminder step 2 of 3'}</span>
         <h2 id="due-title">{flagged ? 'This check has been flagged to your Crew Medical Officer' : 'A check is waiting for you'}</h2>
+        <span className="label">{flagged ? 'Reminder step 3 of 3' : 'Reminder step 2 of 3'}</span>
         <p>
           <strong>{check.name}</strong> is {lateText(check.lateMs)} overdue. {flagged ? 'It now shows as a missed check on the Crew Medical Officer summary until you take it.' : 'Taking it now keeps your health picture up to date.'} {pace}
         </p>
@@ -133,7 +133,6 @@ export function MoodQuickCheck({ measurement, history }: { measurement: Measurem
       ) : (
         <>
           <div>
-            <span className="eyebrow">Daily check-in</span>
             <h2>How do you feel today?</h2>
             <p className="muted small">0 is the worst you could feel, 10 is the best. Your answer is private to you and the medical team.</p>
           </div>
@@ -187,7 +186,6 @@ export function ResultSheet({ measurement, history, risks, newBadges, nextUp, ch
     return (
       <div className="scrim" role="dialog" aria-modal="true" aria-labelledby="result-title">
         <div className="dialog result zone-none">
-          <span className="eyebrow">Undo</span>
           <h2 id="result-title">{measurement.name}</h2>
           <p role="status">Removing the reading you just saved…</p>
         </div>
@@ -197,11 +195,11 @@ export function ResultSheet({ measurement, history, risks, newBadges, nextUp, ch
   return (
     <div className="scrim" role="dialog" aria-modal="true" aria-labelledby="result-title">
       <div className={`dialog result zone-${zone}`}>
-        <span className="eyebrow">{change ? 'Edit saved' : 'Saved'}</span>
         <h2 id="result-title">{measurement.name}</h2>
+        <span className="label">{change ? 'Edit saved' : 'Saved'}</span>
         {change && <ChangeNotice entry={change} />}
         {isVisual ? (
-          <p>Your image is saved. Images are not scored by the app yet, so share it with your Crew Medical Officer at the next check.</p>
+          <p>Your scan is saved. It is scored once a medical officer has reviewed it against the checklist, and it counts toward your risk scores from then on.</p>
         ) : value !== null ? (
           <div className="result-value">
             <span className="num result-number">{formatValue(value)}</span>

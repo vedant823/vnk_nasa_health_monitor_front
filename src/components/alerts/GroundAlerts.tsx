@@ -24,13 +24,14 @@ export interface GroundAlertState {
 }
 
 /** Keeps the alerts in step with the readings and ticks once a second while a countdown runs. */
-export function useGroundAlerts(dash: Dashboard): GroundAlertState {
+export function useGroundAlerts(dash: Dashboard, enabled = true): GroundAlertState {
   const { username } = useAuth();
   const { environment } = useEnvironment();
-  const [alerts, setAlerts] = useState<GroundAlert[]>(() => loadAlerts(username));
+  // Alerts are kept on the crew member's own device, so an officer looking at someone else gets none.
+  const [alerts, setAlerts] = useState<GroundAlert[]>(() => (enabled ? loadAlerts(username) : []));
   const [now, setNow] = useState(() => Date.now());
 
-  const ready = !dash.isLoading && !dash.error;
+  const ready = enabled && !dash.isLoading && !dash.error;
   // The dashboard builds new objects on every render, so compare readings by a short signature.
   const signature = dash.measurementIds
     .map((id) => {

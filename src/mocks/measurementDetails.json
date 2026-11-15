@@ -5,10 +5,43 @@
       "name": "White Blood Cell Count",
       "type": "numerical",
       "unit": "cells per microliter",
-      "dangerousLow": 3000.0,
-      "abnormalLow": 4500.0,
-      "abnormalHigh": 11000.0,
-      "dangerousHigh": 30000.0,
+      "ranges": [
+        {
+          "situation": "spacecraft",
+          "dangerousLow": 3000.0,
+          "abnormalLow": 4500.0,
+          "abnormalHigh": 11000.0,
+          "dangerousHigh": 30000.0
+        },
+        {
+          "situation": "station",
+          "dangerousLow": 3000.0,
+          "abnormalLow": 4500.0,
+          "abnormalHigh": 11000.0,
+          "dangerousHigh": 30000.0
+        },
+        {
+          "situation": "rover",
+          "dangerousLow": 3000.0,
+          "abnormalLow": 4500.0,
+          "abnormalHigh": 11000.0,
+          "dangerousHigh": 30000.0
+        },
+        {
+          "situation": "moon",
+          "dangerousLow": 3000.0,
+          "abnormalLow": 4500.0,
+          "abnormalHigh": 11000.0,
+          "dangerousHigh": 30000.0
+        },
+        {
+          "situation": "mars",
+          "dangerousLow": 3000.0,
+          "abnormalLow": 4500.0,
+          "abnormalHigh": 11000.0,
+          "dangerousHigh": 30000.0
+        }
+      ],
       "canBeNegative": false,
       "lowRecommendation": "Low white cell count: rest, extra hand hygiene, avoid sick crewmates; repeat the count in 48 hours and tell the Crew Medical Officer if it is below 3000.",
       "highRecommendation": "High white cell count can mean infection: check temperature and symptoms, alert the Crew Medical Officer."
@@ -18,10 +51,43 @@
       "name": "Lymphocyte Count",
       "type": "numerical",
       "unit": "cells per microliter",
-      "dangerousLow": 600.0,
-      "abnormalLow": 1000.0,
-      "abnormalHigh": 4800.0,
-      "dangerousHigh": 8000.0,
+      "ranges": [
+        {
+          "situation": "spacecraft",
+          "dangerousLow": 600.0,
+          "abnormalLow": 1000.0,
+          "abnormalHigh": 4800.0,
+          "dangerousHigh": 8000.0
+        },
+        {
+          "situation": "station",
+          "dangerousLow": 600.0,
+          "abnormalLow": 1000.0,
+          "abnormalHigh": 4800.0,
+          "dangerousHigh": 8000.0
+        },
+        {
+          "situation": "rover",
+          "dangerousLow": 600.0,
+          "abnormalLow": 1000.0,
+          "abnormalHigh": 4800.0,
+          "dangerousHigh": 8000.0
+        },
+        {
+          "situation": "moon",
+          "dangerousLow": 600.0,
+          "abnormalLow": 1000.0,
+          "abnormalHigh": 4800.0,
+          "dangerousHigh": 8000.0
+        },
+        {
+          "situation": "mars",
+          "dangerousLow": 600.0,
+          "abnormalLow": 1000.0,
+          "abnormalHigh": 4800.0,
+          "dangerousHigh": 8000.0
+        }
+      ],
       "canBeNegative": false,
       "lowRecommendation": "Low lymphocytes raise infection and virus reactivation risk: protect sleep, hygiene, repeat in 48 hours; below 600 alert the Crew Medical Officer.",
       "highRecommendation": "High lymphocytes can follow a viral infection: log symptoms and repeat in 48 hours."
@@ -31,38 +97,137 @@
       "name": "Body Mass Change",
       "type": "numerical",
       "unit": "percent change from pre-flight",
-      "baselineMode": "percent",
-      "dangerousLow": -5.0,
-      "abnormalLow": -2.0,
-      "abnormalHigh": 3.0,
-      "dangerousHigh": 5.0,
+      "ranges": [
+        {
+          "situation": "spacecraft",
+          "dangerousLow": -5.0,
+          "abnormalLow": -2.0,
+          "abnormalHigh": 3.0,
+          "dangerousHigh": 5.0
+        },
+        {
+          "situation": "station",
+          "dangerousLow": -5.0,
+          "abnormalLow": -2.0,
+          "abnormalHigh": 3.0,
+          "dangerousHigh": 5.0
+        },
+        {
+          "situation": "rover",
+          "dangerousLow": -5.0,
+          "abnormalLow": -2.0,
+          "abnormalHigh": 3.0,
+          "dangerousHigh": 5.0
+        },
+        {
+          "situation": "moon",
+          "dangerousLow": -5.0,
+          "abnormalLow": -2.0,
+          "abnormalHigh": 3.0,
+          "dangerousHigh": 5.0
+        },
+        {
+          "situation": "mars",
+          "dangerousLow": -5.0,
+          "abnormalLow": -2.0,
+          "abnormalHigh": 3.0,
+          "dangerousHigh": 5.0
+        }
+      ],
       "canBeNegative": true,
       "lowRecommendation": "Body mass is falling: eat missed meals, add protein, complete resistance exercise; recheck in 1 week. Worse than -5% alert the Crew Medical Officer.",
-      "highRecommendation": "Body mass is rising: review food log and fluid retention; recheck in 1 week."
+      "highRecommendation": "Body mass is rising: review food log and fluid retention; recheck in 1 week.",
+      "baselineMode": "percent"
     },
     {
       "id": "grip_strength_change",
       "name": "Grip Strength Change",
       "type": "numerical",
       "unit": "percent change from pre-flight",
-      "baselineMode": "percent",
-      "dangerousLow": -15.0,
-      "abnormalLow": -5.0,
-      "abnormalHigh": 30.0,
-      "dangerousHigh": 50.0,
+      "ranges": [
+        {
+          "situation": "spacecraft",
+          "dangerousLow": -15.0,
+          "abnormalLow": -5.0,
+          "abnormalHigh": 30.0,
+          "dangerousHigh": 50.0
+        },
+        {
+          "situation": "station",
+          "dangerousLow": -15.0,
+          "abnormalLow": -5.0,
+          "abnormalHigh": 30.0,
+          "dangerousHigh": 50.0
+        },
+        {
+          "situation": "rover",
+          "dangerousLow": -15.0,
+          "abnormalLow": -5.0,
+          "abnormalHigh": 30.0,
+          "dangerousHigh": 50.0
+        },
+        {
+          "situation": "moon",
+          "dangerousLow": -15.0,
+          "abnormalLow": -5.0,
+          "abnormalHigh": 30.0,
+          "dangerousHigh": 50.0
+        },
+        {
+          "situation": "mars",
+          "dangerousLow": -15.0,
+          "abnormalLow": -5.0,
+          "abnormalHigh": 30.0,
+          "dangerousHigh": 50.0
+        }
+      ],
       "canBeNegative": true,
       "lowRecommendation": "Strength is dropping: add a resistance session and check exercise logs; recheck in 1 week. Worse than -15% alert the Crew Medical Officer.",
-      "highRecommendation": "Unusually large increase: repeat the test to rule out a measurement error."
+      "highRecommendation": "Unusually large increase: repeat the test to rule out a measurement error.",
+      "baselineMode": "percent"
     },
     {
       "id": "intraocular_pressure",
       "name": "Intraocular Pressure",
       "type": "numerical",
       "unit": "mmHg",
-      "dangerousLow": 6.0,
-      "abnormalLow": 10.0,
-      "abnormalHigh": 21.0,
-      "dangerousHigh": 25.0,
+      "ranges": [
+        {
+          "situation": "spacecraft",
+          "dangerousLow": 6.0,
+          "abnormalLow": 10.0,
+          "abnormalHigh": 21.0,
+          "dangerousHigh": 25.0
+        },
+        {
+          "situation": "station",
+          "dangerousLow": 6.0,
+          "abnormalLow": 10.0,
+          "abnormalHigh": 21.0,
+          "dangerousHigh": 25.0
+        },
+        {
+          "situation": "rover",
+          "dangerousLow": 6.0,
+          "abnormalLow": 10.0,
+          "abnormalHigh": 21.0,
+          "dangerousHigh": 25.0
+        },
+        {
+          "situation": "moon",
+          "dangerousLow": 6.0,
+          "abnormalLow": 10.0,
+          "abnormalHigh": 21.0,
+          "dangerousHigh": 25.0
+        },
+        {
+          "situation": "mars",
+          "dangerousLow": 6.0,
+          "abnormalLow": 10.0,
+          "abnormalHigh": 21.0,
+          "dangerousHigh": 25.0
+        }
+      ],
       "canBeNegative": false,
       "lowRecommendation": "Very low eye pressure is unusual: repeat the reading and alert the Crew Medical Officer if below 6.",
       "highRecommendation": "Eye pressure is high: lower cabin CO2, avoid straining, repeat within 24 hours; above 25 alert the Crew Medical Officer for an OCT scan."
@@ -72,29 +237,136 @@
       "name": "Retinal Thickness Change",
       "type": "numerical",
       "unit": "micrometres change from pre-flight",
-      "baselineMode": "difference",
-      "dangerousLow": -40.0,
-      "abnormalLow": -20.0,
-      "abnormalHigh": 20.0,
-      "dangerousHigh": 55.0,
+      "ranges": [
+        {
+          "situation": "spacecraft",
+          "dangerousLow": -40.0,
+          "abnormalLow": -20.0,
+          "abnormalHigh": 20.0,
+          "dangerousHigh": 55.0
+        },
+        {
+          "situation": "station",
+          "dangerousLow": -40.0,
+          "abnormalLow": -20.0,
+          "abnormalHigh": 20.0,
+          "dangerousHigh": 55.0
+        },
+        {
+          "situation": "rover",
+          "dangerousLow": -40.0,
+          "abnormalLow": -20.0,
+          "abnormalHigh": 20.0,
+          "dangerousHigh": 55.0
+        },
+        {
+          "situation": "moon",
+          "dangerousLow": -40.0,
+          "abnormalLow": -20.0,
+          "abnormalHigh": 20.0,
+          "dangerousHigh": 55.0
+        },
+        {
+          "situation": "mars",
+          "dangerousLow": -40.0,
+          "abnormalLow": -20.0,
+          "abnormalHigh": 20.0,
+          "dangerousHigh": 55.0
+        }
+      ],
       "canBeNegative": true,
       "lowRecommendation": "Retina is thinning: repeat the OCT scan and send images to the flight surgeon in the next downlink.",
-      "highRecommendation": "Retina is thickening, an early sign of SANS: daily near-vision check, lower CO2, repeat OCT in 1 week; above 55 alert the Crew Medical Officer."
+      "highRecommendation": "Retina is thickening, an early sign of SANS: daily near-vision check, lower CO2, repeat OCT in 1 week; above 55 alert the Crew Medical Officer.",
+      "baselineMode": "difference"
     },
     {
       "id": "oct_fundus_scan",
       "name": "OCT Fundus Scan",
-      "type": "visual"
+      "type": "visual",
+      "unit": null,
+      "ranges": [
+        {
+          "situation": "spacecraft",
+          "dangerousLow": null,
+          "abnormalLow": null,
+          "abnormalHigh": null,
+          "dangerousHigh": null
+        },
+        {
+          "situation": "station",
+          "dangerousLow": null,
+          "abnormalLow": null,
+          "abnormalHigh": null,
+          "dangerousHigh": null
+        },
+        {
+          "situation": "rover",
+          "dangerousLow": null,
+          "abnormalLow": null,
+          "abnormalHigh": null,
+          "dangerousHigh": null
+        },
+        {
+          "situation": "moon",
+          "dangerousLow": null,
+          "abnormalLow": null,
+          "abnormalHigh": null,
+          "dangerousHigh": null
+        },
+        {
+          "situation": "mars",
+          "dangerousLow": null,
+          "abnormalLow": null,
+          "abnormalHigh": null,
+          "dangerousHigh": null
+        }
+      ],
+      "canBeNegative": null,
+      "lowRecommendation": null,
+      "highRecommendation": null
     },
     {
       "id": "stand_test_systolic_drop",
       "name": "Stand Test Systolic Drop",
       "type": "numerical",
       "unit": "mmHg fall in systolic pressure on standing (rise is negative)",
-      "dangerousLow": -30.0,
-      "abnormalLow": -20.0,
-      "abnormalHigh": 10.0,
-      "dangerousHigh": 20.0,
+      "ranges": [
+        {
+          "situation": "spacecraft",
+          "dangerousLow": -30.0,
+          "abnormalLow": -20.0,
+          "abnormalHigh": 10.0,
+          "dangerousHigh": 20.0
+        },
+        {
+          "situation": "station",
+          "dangerousLow": -30.0,
+          "abnormalLow": -20.0,
+          "abnormalHigh": 10.0,
+          "dangerousHigh": 20.0
+        },
+        {
+          "situation": "rover",
+          "dangerousLow": -30.0,
+          "abnormalLow": -20.0,
+          "abnormalHigh": 10.0,
+          "dangerousHigh": 20.0
+        },
+        {
+          "situation": "moon",
+          "dangerousLow": -30.0,
+          "abnormalLow": -20.0,
+          "abnormalHigh": 10.0,
+          "dangerousHigh": 20.0
+        },
+        {
+          "situation": "mars",
+          "dangerousLow": -30.0,
+          "abnormalLow": -20.0,
+          "abnormalHigh": 10.0,
+          "dangerousHigh": 20.0
+        }
+      ],
       "canBeNegative": true,
       "lowRecommendation": "Blood pressure rose sharply on standing: rest, repeat the test in 30 minutes and tell the Crew Medical Officer if it repeats.",
       "highRecommendation": "Blood pressure fell on standing: drink 1 litre of water with salt, sit before standing, repeat in 30 minutes; a fall of 20 or more alerts the Crew Medical Officer."
@@ -104,10 +376,43 @@
       "name": "Resting Heart Rate",
       "type": "numerical",
       "unit": "beats per minute",
-      "dangerousLow": 40.0,
-      "abnormalLow": 50.0,
-      "abnormalHigh": 100.0,
-      "dangerousHigh": 120.0,
+      "ranges": [
+        {
+          "situation": "spacecraft",
+          "dangerousLow": 40.0,
+          "abnormalLow": 50.0,
+          "abnormalHigh": 100.0,
+          "dangerousHigh": 120.0
+        },
+        {
+          "situation": "station",
+          "dangerousLow": 40.0,
+          "abnormalLow": 50.0,
+          "abnormalHigh": 100.0,
+          "dangerousHigh": 120.0
+        },
+        {
+          "situation": "rover",
+          "dangerousLow": 40.0,
+          "abnormalLow": 50.0,
+          "abnormalHigh": 100.0,
+          "dangerousHigh": 120.0
+        },
+        {
+          "situation": "moon",
+          "dangerousLow": 40.0,
+          "abnormalLow": 50.0,
+          "abnormalHigh": 100.0,
+          "dangerousHigh": 120.0
+        },
+        {
+          "situation": "mars",
+          "dangerousLow": 40.0,
+          "abnormalLow": 50.0,
+          "abnormalHigh": 100.0,
+          "dangerousHigh": 120.0
+        }
+      ],
       "canBeNegative": false,
       "lowRecommendation": "Heart rate is low: repeat after 5 minutes of rest; below 40 with dizziness alert the Crew Medical Officer.",
       "highRecommendation": "Heart rate is high at rest: rest, hydrate, repeat in 5 minutes; above 120 alert the Crew Medical Officer."
@@ -117,10 +422,43 @@
       "name": "Ejection Fraction",
       "type": "numerical",
       "unit": "percent",
-      "dangerousLow": 40.0,
-      "abnormalLow": 50.0,
-      "abnormalHigh": 70.0,
-      "dangerousHigh": 80.0,
+      "ranges": [
+        {
+          "situation": "spacecraft",
+          "dangerousLow": 40.0,
+          "abnormalLow": 50.0,
+          "abnormalHigh": 70.0,
+          "dangerousHigh": 80.0
+        },
+        {
+          "situation": "station",
+          "dangerousLow": 40.0,
+          "abnormalLow": 50.0,
+          "abnormalHigh": 70.0,
+          "dangerousHigh": 80.0
+        },
+        {
+          "situation": "rover",
+          "dangerousLow": 40.0,
+          "abnormalLow": 50.0,
+          "abnormalHigh": 70.0,
+          "dangerousHigh": 80.0
+        },
+        {
+          "situation": "moon",
+          "dangerousLow": 40.0,
+          "abnormalLow": 50.0,
+          "abnormalHigh": 70.0,
+          "dangerousHigh": 80.0
+        },
+        {
+          "situation": "mars",
+          "dangerousLow": 40.0,
+          "abnormalLow": 50.0,
+          "abnormalHigh": 70.0,
+          "dangerousHigh": 80.0
+        }
+      ],
       "canBeNegative": false,
       "lowRecommendation": "Heart pumping is reduced: repeat the ultrasound and alert the Crew Medical Officer; send images to the flight surgeon.",
       "highRecommendation": "Unusually high value: repeat the scan to check the measurement."
@@ -130,10 +468,43 @@
       "name": "Sleep Duration",
       "type": "numerical",
       "unit": "hours per night (3-night average)",
-      "dangerousLow": 6.0,
-      "abnormalLow": 7.0,
-      "abnormalHigh": 10.0,
-      "dangerousHigh": 12.0,
+      "ranges": [
+        {
+          "situation": "spacecraft",
+          "dangerousLow": 6.0,
+          "abnormalLow": 7.0,
+          "abnormalHigh": 10.0,
+          "dangerousHigh": 12.0
+        },
+        {
+          "situation": "station",
+          "dangerousLow": 6.0,
+          "abnormalLow": 7.0,
+          "abnormalHigh": 10.0,
+          "dangerousHigh": 12.0
+        },
+        {
+          "situation": "rover",
+          "dangerousLow": 6.0,
+          "abnormalLow": 7.0,
+          "abnormalHigh": 10.0,
+          "dangerousHigh": 12.0
+        },
+        {
+          "situation": "moon",
+          "dangerousLow": 6.0,
+          "abnormalLow": 7.0,
+          "abnormalHigh": 10.0,
+          "dangerousHigh": 12.0
+        },
+        {
+          "situation": "mars",
+          "dangerousLow": 6.0,
+          "abnormalLow": 7.0,
+          "abnormalHigh": 10.0,
+          "dangerousHigh": 12.0
+        }
+      ],
       "canBeNegative": false,
       "lowRecommendation": "Not enough sleep: fix the sleep schedule, dim lights before bed; under 6 hours for 3 nights alerts the Crew Medical Officer.",
       "highRecommendation": "Sleeping much longer than usual can signal illness or low mood: log how you feel and tell the Crew Medical Officer if it continues."
@@ -143,51 +514,185 @@
       "name": "Memory Score Change",
       "type": "numerical",
       "unit": "percent change from baseline",
-      "baselineMode": "percent",
-      "dangerousLow": -20.0,
-      "abnormalLow": -5.0,
-      "abnormalHigh": 50.0,
-      "dangerousHigh": 100.0,
+      "ranges": [
+        {
+          "situation": "spacecraft",
+          "dangerousLow": -20.0,
+          "abnormalLow": -5.0,
+          "abnormalHigh": 50.0,
+          "dangerousHigh": 100.0
+        },
+        {
+          "situation": "station",
+          "dangerousLow": -20.0,
+          "abnormalLow": -5.0,
+          "abnormalHigh": 50.0,
+          "dangerousHigh": 100.0
+        },
+        {
+          "situation": "rover",
+          "dangerousLow": -20.0,
+          "abnormalLow": -5.0,
+          "abnormalHigh": 50.0,
+          "dangerousHigh": 100.0
+        },
+        {
+          "situation": "moon",
+          "dangerousLow": -20.0,
+          "abnormalLow": -5.0,
+          "abnormalHigh": 50.0,
+          "dangerousHigh": 100.0
+        },
+        {
+          "situation": "mars",
+          "dangerousLow": -20.0,
+          "abnormalLow": -5.0,
+          "abnormalHigh": 50.0,
+          "dangerousHigh": 100.0
+        }
+      ],
       "canBeNegative": true,
       "lowRecommendation": "Memory and attention are lower than baseline: protect sleep and retest in 1 week; worse than -20% double-check critical tasks and alert the Crew Medical Officer.",
-      "highRecommendation": "Large improvement: likely practice effect; no action."
+      "highRecommendation": "Large improvement: likely practice effect; no action.",
+      "baselineMode": "percent"
     },
     {
       "id": "balance_score_change",
       "name": "Balance Score Change",
       "type": "numerical",
       "unit": "percent change from baseline",
-      "baselineMode": "percent",
-      "dangerousLow": -25.0,
-      "abnormalLow": -5.0,
-      "abnormalHigh": 50.0,
-      "dangerousHigh": 100.0,
+      "ranges": [
+        {
+          "situation": "spacecraft",
+          "dangerousLow": -25.0,
+          "abnormalLow": -5.0,
+          "abnormalHigh": 50.0,
+          "dangerousHigh": 100.0
+        },
+        {
+          "situation": "station",
+          "dangerousLow": -25.0,
+          "abnormalLow": -5.0,
+          "abnormalHigh": 50.0,
+          "dangerousHigh": 100.0
+        },
+        {
+          "situation": "rover",
+          "dangerousLow": -25.0,
+          "abnormalLow": -5.0,
+          "abnormalHigh": 50.0,
+          "dangerousHigh": 100.0
+        },
+        {
+          "situation": "moon",
+          "dangerousLow": -25.0,
+          "abnormalLow": -5.0,
+          "abnormalHigh": 50.0,
+          "dangerousHigh": 100.0
+        },
+        {
+          "situation": "mars",
+          "dangerousLow": -25.0,
+          "abnormalLow": -5.0,
+          "abnormalHigh": 50.0,
+          "dangerousHigh": 100.0
+        }
+      ],
       "canBeNegative": true,
       "lowRecommendation": "Balance is worse than baseline: slow head movements and retest in 24 hours; worse than -25% no EVA, rover driving or robotics until normal.",
-      "highRecommendation": "Large improvement: repeat the test to check the measurement."
+      "highRecommendation": "Large improvement: repeat the test to check the measurement.",
+      "baselineMode": "percent"
     },
     {
       "id": "mood_score",
       "name": "Mood Score",
       "type": "numerical",
       "unit": "score 0 (worst) to 10 (best)",
-      "dangerousLow": 3.0,
-      "abnormalLow": 7.0,
-      "abnormalHigh": 10.0,
-      "dangerousHigh": 10.0,
+      "ranges": [
+        {
+          "situation": "spacecraft",
+          "dangerousLow": 3.0,
+          "abnormalLow": 7.0,
+          "abnormalHigh": 10.0,
+          "dangerousHigh": 10.0
+        },
+        {
+          "situation": "station",
+          "dangerousLow": 3.0,
+          "abnormalLow": 7.0,
+          "abnormalHigh": 10.0,
+          "dangerousHigh": 10.0
+        },
+        {
+          "situation": "rover",
+          "dangerousLow": 3.0,
+          "abnormalLow": 7.0,
+          "abnormalHigh": 10.0,
+          "dangerousHigh": 10.0
+        },
+        {
+          "situation": "moon",
+          "dangerousLow": 3.0,
+          "abnormalLow": 7.0,
+          "abnormalHigh": 10.0,
+          "dangerousHigh": 10.0
+        },
+        {
+          "situation": "mars",
+          "dangerousLow": 3.0,
+          "abnormalLow": 7.0,
+          "abnormalHigh": 10.0,
+          "dangerousHigh": 10.0
+        }
+      ],
       "canBeNegative": false,
-      "lowRecommendation": "Mood is low: take private time, call family, exercise; 3 or lower, or 3 low days in a row, alerts the Crew Medical Officer and offers a private session with the psychologist."
+      "lowRecommendation": "Mood is low: take private time, call family, exercise; 3 or lower, or 3 low days in a row, alerts the Crew Medical Officer and offers a private session with the psychologist.",
+      "highRecommendation": null
     },
     {
       "id": "solar_proton_flux",
       "name": "Solar Proton Flux",
       "type": "numerical",
       "unit": "particle flux units (protons above 10 MeV)",
-      "dangerousLow": 0.0,
-      "abnormalLow": 0.0,
-      "abnormalHigh": 10.0,
-      "dangerousHigh": 100.0,
+      "ranges": [
+        {
+          "situation": "spacecraft",
+          "dangerousLow": 0.0,
+          "abnormalLow": 0.0,
+          "abnormalHigh": 10.0,
+          "dangerousHigh": 100.0
+        },
+        {
+          "situation": "station",
+          "dangerousLow": 0.0,
+          "abnormalLow": 0.0,
+          "abnormalHigh": 10.0,
+          "dangerousHigh": 100.0
+        },
+        {
+          "situation": "rover",
+          "dangerousLow": 0.0,
+          "abnormalLow": 0.0,
+          "abnormalHigh": 10.0,
+          "dangerousHigh": 100.0
+        },
+        {
+          "situation": "moon",
+          "dangerousLow": 0.0,
+          "abnormalLow": 0.0,
+          "abnormalHigh": 10.0,
+          "dangerousHigh": 100.0
+        },
+        {
+          "situation": "mars",
+          "dangerousLow": 0.0,
+          "abnormalLow": 0.0,
+          "abnormalHigh": 10.0,
+          "dangerousHigh": 100.0
+        }
+      ],
       "canBeNegative": false,
+      "lowRecommendation": null,
       "highRecommendation": "Solar storm under way: move toward the most shielded area, postpone EVA, check dose every hour; at 100 or more shelter now and alert the Crew Medical Officer."
     }
   ]

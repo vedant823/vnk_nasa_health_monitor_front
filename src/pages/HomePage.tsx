@@ -93,7 +93,6 @@ export function HomePage() {
   return (
     <div className="page">
       <div className="page-header">
-        <span className="eyebrow">Home</span>
         <h1>{username ? `Welcome back, ${username}` : 'Welcome back'}</h1>
         <div className="chips">
           <Link to="/profile" className="chip">

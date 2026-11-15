@@ -1,0 +1,57 @@
+/* AI-generated code (Claude by Anthropic), reviewed by team VNK. See AI_DISCLOSURE.md. Design tokens: every colour and font in the app is declared here. */
+:root {
+  color-scheme: light;
+  --space-3xs: 2px; --space-2xs: 4px; --space-xs: 8px; --space-sm: 12px; --space-md: 16px; --space-lg: 24px; --space-xl: 40px; --space-2xl: 64px; --space-3xl: 96px; --space-4xl: 144px;
+  --text-xs: 0.75rem; --text-sm: 0.875rem; --text-md: 1rem; --text-lg: 1.2rem; --text-xl: 1.44rem; --text-2xl: 1.728rem; --text-3xl: 2.074rem;
+  --text-display-s: 1.44rem; --text-display: 1.728rem; --text-section: 1.2rem; --text-title: 1rem; --text-lead: 1rem;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1); --ease-in: cubic-bezier(0.7, 0, 0.84, 0); --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-micro: 120ms; --dur-short: 220ms; --dur-long: 420ms;
+  --color-error: oklch(52% 0.19 27); --color-success: oklch(50% 0.12 150);
+  --container: 1440px; --gutter: 64px; --gap-columns: 32px; --section-gap-s: 120px; --section-gap: 144px; --section-gap-l: 176px;
+  --z-base: 1; --z-raised: 10; --z-dropdown: 100; --z-sticky: 200; --z-sticky-nav: 300; --z-modal: 400; --z-toast: 500; --z-tooltip: 600;
+  --color-paper: oklch(95.5% 0.006 250); --color-paper-2: oklch(91% 0.009 250); --color-paper-3: oklch(99.5% 0.005 250);
+  --color-ink: oklch(16% 0.014 262); --color-ink-2: oklch(29% 0.014 262); --color-muted: oklch(47% 0.016 260);
+  --color-rule: oklch(80% 0.011 250); --color-ink-rule: oklch(34% 0.014 262);
+  --color-accent: oklch(51% 0.22 264); --color-accent-2: oklch(81% 0.16 82); --color-accent-ink: oklch(99.5% 0.003 250); --color-focus: oklch(51% 0.22 264);
+  --font-display: "Chivo Mono", ui-monospace, monospace; --font-body: var(--font-display); --font-outlier: var(--font-body);
+  --radius-card: 0; --radius-pill: 999px; --rule-hair: 1px; --rule-bar: 2px;
+  --shadow-card: 0 24px 40px -24px oklch(8% 0.01 260 / 0.6);
+  --tracking-display: -0.03em; --display-weight: 800;
+}
+
+/* App tokens: status zones, chart bands, overlays and step illustrations. */
+:root {
+  --color-accent-text: oklch(46% 0.21 264);
+  --zone-green: oklch(40% 0.12 150); --zone-green-bg: oklch(94% 0.045 150);
+  --zone-yellow: oklch(42% 0.1 70); --zone-yellow-bg: oklch(93% 0.07 90);
+  --zone-red: oklch(46% 0.19 27); --zone-red-bg: oklch(93% 0.04 25);
+  --zone-emergency: oklch(38% 0.16 27); --zone-emergency-ink: oklch(98% 0.01 27);
+  --zone-none: oklch(47% 0.016 260); --zone-none-bg: oklch(91% 0.009 250);
+  --band-green: oklch(92% 0.05 150); --band-yellow: oklch(92% 0.07 90); --band-red: oklch(90% 0.05 25);
+  --chart-grid: oklch(16% 0.014 262 / 0.1);
+  --color-scrim: oklch(16% 0.014 262 / 0.62);
+  --il-ink: oklch(30% 0.04 262); --il-fill: oklch(99.5% 0.005 250); --il-tint: oklch(88% 0.035 255); --il-accent: oklch(51% 0.22 264); --il-alert: oklch(46% 0.19 27);
+  --art-mark-bg: oklch(99.5% 0.005 250 / 0.92); --art-mark-ink: oklch(29% 0.014 262);
+  --font-art: var(--font-body);
+}
+/* Wayfind night colourway, used when the device asks for a dark screen. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --color-paper: oklch(15% 0.012 262); --color-paper-2: oklch(23% 0.014 262); --color-paper-3: oklch(19% 0.013 262);
+    --color-ink: oklch(96% 0.005 250); --color-ink-2: oklch(86% 0.008 250); --color-muted: oklch(72% 0.014 255);
+    --color-rule: oklch(31% 0.014 262); --color-ink-rule: oklch(62% 0.014 262);
+    --color-accent: oklch(62% 0.2 264); --color-accent-ink: oklch(12% 0.012 262); --color-focus: oklch(72% 0.16 264); --color-accent-text: oklch(78% 0.12 264);
+    --color-error: oklch(74% 0.16 27); --color-success: oklch(78% 0.15 150);
+    --zone-green: oklch(80% 0.15 150); --zone-green-bg: oklch(26% 0.05 150);
+    --zone-yellow: oklch(84% 0.13 85); --zone-yellow-bg: oklch(28% 0.05 85);
+    --zone-red: oklch(76% 0.15 27); --zone-red-bg: oklch(27% 0.07 27);
+    --zone-emergency: oklch(46% 0.18 27); --zone-emergency-ink: oklch(98% 0.01 27);
+    --zone-none: oklch(72% 0.014 255); --zone-none-bg: oklch(23% 0.014 262);
+    --band-green: oklch(28% 0.05 150); --band-yellow: oklch(30% 0.05 85); --band-red: oklch(29% 0.07 27);
+    --chart-grid: oklch(96% 0.005 250 / 0.12);
+    --color-scrim: oklch(8% 0.01 262 / 0.72);
+    --il-ink: oklch(88% 0.02 255); --il-fill: oklch(17% 0.013 262); --il-tint: oklch(34% 0.04 262); --il-accent: oklch(74% 0.14 264); --il-alert: oklch(76% 0.15 27);
+    --art-mark-bg: oklch(12% 0.012 262 / 0.9); --art-mark-ink: oklch(92% 0.006 250);
+  }
+}

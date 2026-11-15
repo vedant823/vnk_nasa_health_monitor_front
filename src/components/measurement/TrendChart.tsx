@@ -130,13 +130,13 @@ export function TrendChart({ measurement, history }: { measurement: Measurement;
                 <ReferenceArea key={`${b.zone}-${b.y1}`} y1={b.y1} y2={b.y2} fill={`var(--band-${b.zone})`} fillOpacity={1} stroke="none" ifOverflow="hidden" />
               ))}
               <CartesianGrid vertical={false} stroke="var(--chart-grid)" />
-              <XAxis dataKey="t" type="number" scale="time" domain={[tMin - tPad, tMax + tPad]} tickFormatter={(t: number) => formatDate(t)} tick={{ fill: 'var(--muted)', fontSize: 12 }} stroke="var(--hairline)" tickLine={false} minTickGap={40} />
-              <YAxis domain={[lo, hi]} width={52} tickFormatter={(v: number) => formatValue(v)} tick={{ fill: 'var(--muted)', fontSize: 12 }} stroke="var(--hairline)" tickLine={false} allowDataOverflow />
+              <XAxis dataKey="t" type="number" scale="time" domain={[tMin - tPad, tMax + tPad]} tickFormatter={(t: number) => formatDate(t)} tick={{ fill: 'var(--color-muted)', fontSize: 12 }} stroke="var(--color-rule)" tickLine={false} minTickGap={40} />
+              <YAxis domain={[lo, hi]} width={52} tickFormatter={(v: number) => formatValue(v)} tick={{ fill: 'var(--color-muted)', fontSize: 12 }} stroke="var(--color-rule)" tickLine={false} allowDataOverflow />
               {usesBaseline(measurement) && lo < 0 && hi > 0 && (
-                <ReferenceLine y={0} stroke="var(--muted)" strokeDasharray="4 4" label={{ value: 'Your baseline', position: 'insideTopLeft', fill: 'var(--muted)', fontSize: 12 }} />
+                <ReferenceLine y={0} stroke="var(--color-muted)" strokeDasharray="4 4" label={{ value: 'Your baseline', position: 'insideTopLeft', fill: 'var(--color-muted)', fontSize: 12 }} />
               )}
               <Tooltip
-                cursor={{ stroke: 'var(--muted)', strokeDasharray: '3 3' }}
+                cursor={{ stroke: 'var(--color-muted)', strokeDasharray: '3 3' }}
                 content={({ active, payload }) => {
                   const p = active && payload && payload.length ? (payload[0].payload as Point) : null;
                   if (!p) return null;
@@ -153,7 +153,7 @@ export function TrendChart({ measurement, history }: { measurement: Measurement;
                   );
                 }}
               />
-              <Line dataKey="v" type="monotone" stroke="var(--ink)" strokeWidth={2} dot={<Dot />} activeDot={{ r: 7, className: 'chart-active' }} isAnimationActive={false} />
+              <Line dataKey="v" type="monotone" stroke="var(--color-ink)" strokeWidth={2} dot={<Dot />} activeDot={{ r: 7, className: 'chart-active' }} isAnimationActive={false} />
             </ComposedChart>
           </ResponsiveContainer>
           <ul className="band-legend" aria-label="What the background colors mean">
