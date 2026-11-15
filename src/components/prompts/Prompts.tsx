@@ -1,5 +1,6 @@
 // AI-generated code (Claude by Anthropic), reviewed by team VNK. See AI_DISCLOSURE.md.
-// Gentle nudges: a banner when something is due, a dialog for overdue checks (at most every 4 hours),
+// Gentle nudges: a banner when something is due, a dialog for missed checks, a standing banner once a
+// check is flagged to the Crew Medical Officer (the three steps of lib/reminderEscalation.ts),
 // a one-tap daily mood check-in, and the result sheet shown after a measurement is saved. The mood
 // check-in and the result sheet both offer Undo, which deletes the reading that was just saved.
 import { useEffect, useState } from 'react';
@@ -9,6 +10,9 @@ import { errorMessage } from '../../api/client';
 import { useEnvironment } from '../../auth/EnvironmentContext';
 import type { ChangeEntry } from '../../lib/changeLog';
 import { environmentNotes } from '../../lib/environment';
+import type { GroundAlert } from '../../lib/groundAlerts';
+import { lateText, type MissedCheck } from '../../lib/reminderEscalation';
+import { ExtremeAlertCard } from '../alerts/GroundAlerts';
 import { ChangeNotice } from '../changes/ChangeHistory';
 import { displayUnit, formatValue, usesBaseline } from '../../content/inputSpecs';
 import { useDeleteMeasurement, useLogMeasurement, type RiskView } from '../../hooks/queries';
@@ -35,39 +39,70 @@ export function CheckInBanner({ count, firstId, firstName }: { count: number; fi
 
 const SNOOZE_KEY = 'chm.prompt.snoozeUntil';
 
-/** Pops up for overdue measurements, at most once every 4 hours. */
-export function DuePromptDialog({ id, name, overdueText }: { id: string; name: string; overdueText: string }) {
+/**
+ * Second and third step of the escalating reminders (lib/reminderEscalation.ts). Pops up for a
+ * missed check, at most once every 4 hours. Once the check is flagged to the Crew Medical Officer
+ * the dialog says so, comes back every hour, and can no longer be skipped for the day.
+ */
+export function DuePromptDialog({ check }: { check: MissedCheck }) {
+  const flagged = check.stage === 3;
+  const quiet = flagged ? HOUR : 4 * HOUR;
   const [open, setOpen] = useState(() => Date.now() > Number(localStorage.getItem(SNOOZE_KEY) ?? 0));
   const snooze = (ms: number) => {
     localStorage.setItem(SNOOZE_KEY, String(Date.now() + ms));
     setOpen(false);
   };
   useEffect(() => {
-    // Seeing the prompt counts: do not show it again for 4 hours even if it is ignored.
-    if (open) localStorage.setItem(SNOOZE_KEY, String(Date.now() + 4 * HOUR));
-  }, [open]);
+    // Seeing the prompt counts: do not show it again for a while even if it is ignored.
+    if (open) localStorage.setItem(SNOOZE_KEY, String(Date.now() + quiet));
+  }, [open, quiet]);
   if (!open) return null;
   const endOfDay = new Date();
   endOfDay.setHours(23, 59, 59, 999);
+  const pace = check.zone === 'red' || check.zone === 'emergency' ? 'Its last reading was in the act-now range, so this reminder moves faster.' : check.zone === 'yellow' ? 'Its last reading was in the watch range, so this reminder moves faster.' : '';
   return (
     <div className="scrim" role="dialog" aria-modal="true" aria-labelledby="due-title">
-      <div className="dialog">
-        <h2 id="due-title">A check is waiting for you</h2>
+      <div className={`dialog due-dialog${flagged ? ' flagged' : ''}`}>
+        <span className="eyebrow">{flagged ? 'Reminder step 3 of 3' : 'Reminder step 2 of 3'}</span>
+        <h2 id="due-title">{flagged ? 'This check has been flagged to your Crew Medical Officer' : 'A check is waiting for you'}</h2>
         <p>
-          <strong>{name}</strong> is {overdueText.toLowerCase()}. Taking it now keeps your health picture up to date.
+          <strong>{check.name}</strong> is {lateText(check.lateMs)} overdue. {flagged ? 'It now shows as a missed check on the Crew Medical Officer summary until you take it.' : 'Taking it now keeps your health picture up to date.'} {pace}
         </p>
+        {!flagged && <p className="muted small">If it stays missed, it will be flagged on the Crew Medical Officer summary.</p>}
         <div className="dialog-actions">
-          <Link className="btn btn-filled" to={`/measurements/${encodeURIComponent(id)}/perform`} onClick={() => setOpen(false)}>
+          <Link className="btn btn-filled" to={`/measurements/${encodeURIComponent(check.measurementId)}/perform`} onClick={() => setOpen(false)}>
             Start now
           </Link>
           <button type="button" className="btn btn-outline" onClick={() => snooze(HOUR)}>
             Remind me in 1 hour
           </button>
-          <button type="button" className="btn btn-text" onClick={() => snooze(endOfDay.getTime() - Date.now())}>
-            Skip today
-          </button>
+          {!flagged && (
+            <button type="button" className="btn btn-text" onClick={() => snooze(endOfDay.getTime() - Date.now())}>
+              Skip today
+            </button>
+          )}
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Stays on Home while any check is flagged to the Crew Medical Officer. */
+export function FlaggedChecksBanner({ checks }: { checks: MissedCheck[] }) {
+  if (checks.length === 0) return null;
+  const first = checks[0];
+  return (
+    <div className="banner banner-flagged" role="status">
+      <Icon name="warning" />
+      <p>
+        <strong>
+          {checks.length === 1 ? `${first.name} is ${lateText(first.lateMs)} overdue` : `${checks.length} checks are badly overdue`} and flagged to your Crew Medical Officer.
+        </strong>{' '}
+        {checks.length > 1 && `The oldest is ${first.name}, ${lateText(first.lateMs)} overdue. `}Take {checks.length === 1 ? 'it' : 'them'} to clear the flag.
+      </p>
+      <Link className="btn btn-filled" to={`/measurements/${encodeURIComponent(first.measurementId)}/perform`}>
+        Start
+      </Link>
     </div>
   );
 }
@@ -126,13 +161,15 @@ interface ResultProps {
   nextUp?: string;
   /** Set when this result comes from editing an older reading. */
   change?: ChangeEntry;
+  /** Set when this reading is far outside its range: the alert, the clock and the packet text. */
+  extreme?: { alert: GroundAlert; now: number; packet: string; onSendNow: () => void };
   onClose: () => void;
   /** Called after Undo removed the reading, with the record of what was removed. */
   onUndone: (entry: ChangeEntry) => void;
 }
 
 /** Shown on Home right after a measurement is saved. */
-export function ResultSheet({ measurement, history, risks, newBadges, nextUp, change, onClose, onUndone }: ResultProps) {
+export function ResultSheet({ measurement, history, risks, newBadges, nextUp, change, extreme, onClose, onUndone }: ResultProps) {
   const { environment } = useEnvironment();
   const [emergency, setEmergency] = useState(false);
   const undo = useDeleteMeasurement(measurement.id);
@@ -174,6 +211,7 @@ export function ResultSheet({ measurement, history, risks, newBadges, nextUp, ch
         ) : (
           <p>Your reading is saved.</p>
         )}
+        {extreme && <ExtremeAlertCard alert={extreme.alert} now={extreme.now} packet={extreme.packet} onSendNow={extreme.onSendNow} inResultSheet />}
         {firstBaseline && <p className="note">This first reading is now your baseline. Later readings are compared with it.</p>}
         {result?.zone === 'green' && !emergency && <p>This reading is in the healthy range. No action needed.</p>}
         {advice && !emergency && (
@@ -216,7 +254,7 @@ export function ResultSheet({ measurement, history, risks, newBadges, nextUp, ch
             {zone === 'green' || zone === 'none' ? 'Done' : `Got it (${ZONE_LABEL[zone].toLowerCase()})`}
           </button>
           {/* No index: the backend deletes the most recent reading, which is the one just saved. */}
-          <button type="button" className="btn btn-text" onClick={() => undo.mutate({ action: 'undo' }, { onSuccess: onUndone })}>
+          <button type="button" className={extreme ? 'btn btn-outline' : 'btn btn-text'} onClick={() => undo.mutate({ action: 'undo' }, { onSuccess: onUndone })}>
             Undo this entry
           </button>
         </div>

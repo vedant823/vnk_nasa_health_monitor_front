@@ -1,19 +1,24 @@
 // AI-generated code (Claude by Anthropic), reviewed by team VNK. See AI_DISCLOSURE.md.
 // Crew Medical Officer summary: one page with the red flags, every risk, the latest reading of
 // every measurement, and recent changes. It can be printed or read out. Times are in GMT.
+// It also holds the packets prepared automatically for extreme readings and the missed checks that
+// the escalating reminders have flagged.
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { useEnvironment } from '../auth/EnvironmentContext';
+import { PacketText, alertStatusText, useGroundAlerts } from '../components/alerts/GroundAlerts';
 import { ChangeList } from '../components/changes/ChangeHistory';
 import { ErrorState, Loading, PageHeader } from '../components/layout/AppShell';
 import { ScoreRing, ZoneChip } from '../components/status/Status';
 import { displayUnit, formatValue, tidyNumbers } from '../content/inputSpecs';
 import { useDashboard } from '../hooks/queries';
 import { formatGmt } from '../lib/changeLog';
-import { DAY, describeDue, toMillis } from '../lib/dates';
+import { describeDue, toMillis } from '../lib/dates';
 import { commDelayText, environmentNotes } from '../lib/environment';
 import { RED_FLAGS } from '../lib/escalation';
 import { readinessScore, readinessZone } from '../lib/gamification';
+import { alertStatus } from '../lib/groundAlerts';
+import { STAGE_LABEL, lateText, missedChecks } from '../lib/reminderEscalation';
 import { ZONE_LABEL, ZONE_RANK, latestSet, setValue, type Zone } from '../lib/zones';
 
 interface Flag {
@@ -26,6 +31,7 @@ export function SummaryPage() {
   const { username } = useAuth();
   const { environment } = useEnvironment();
   const dash = useDashboard();
+  const ground = useGroundAlerts(dash);
 
   if (dash.isLoading) return <Loading />;
   if (dash.error) return <ErrorState error={dash.error} onRetry={dash.refetch} />;
@@ -55,7 +61,9 @@ export function SummaryPage() {
       flags.push({ zone: r.zone, text: `Risk: ${r.factor.name}, score ${r.score} of 100 (${ZONE_LABEL[r.zone]})`, to: `/risks/${encodeURIComponent(r.factor.id)}` });
   }
   flags.sort((a, b) => ZONE_RANK[b.zone] - ZONE_RANK[a.zone]);
-  const overdue = readings.filter((r) => r.latest && r.due !== undefined && r.due < now - DAY);
+  // Missed checks from the escalating reminders: step 2 (overdue) and step 3 (flagged).
+  const overdue = missedChecks(dash, now).filter((c) => c.stage >= 2);
+  const flaggedChecks = overdue.filter((c) => c.stage === 3);
   const neverTaken = readings.filter((r) => !r.latest);
   const notes = environmentNotes(environment);
 
@@ -78,7 +86,8 @@ export function SummaryPage() {
           <h2>Mission readiness: {readiness === null ? 'no score yet' : `${readiness} of 100`}</h2>
           <p>
             {flags.filter((f) => f.zone === 'red').length} act-now item{flags.filter((f) => f.zone === 'red').length === 1 ? '' : 's'},{' '}
-            {flags.filter((f) => f.zone === 'yellow').length} to watch, {overdue.length} overdue check{overdue.length === 1 ? '' : 's'}, {neverTaken.length} measurement
+            {flags.filter((f) => f.zone === 'yellow').length} to watch, {overdue.length} overdue check{overdue.length === 1 ? '' : 's'} ({flaggedChecks.length} flagged), {ground.active.length} extreme reading
+            {ground.active.length === 1 ? '' : 's'}, {neverTaken.length} measurement
             {neverTaken.length === 1 ? '' : 's'} never taken.
           </p>
           <p className="muted small">
@@ -86,6 +95,48 @@ export function SummaryPage() {
           </p>
         </div>
       </section>
+
+      {ground.alerts.length > 0 && (
+        <section className="card" aria-label="Extreme readings">
+          <div className="section-head">
+            <h2>Extreme readings: packets prepared automatically</h2>
+            <span className="muted small">Times are in GMT</span>
+          </div>
+          <p className="muted small">
+            A packet is prepared when a reading is past its act-now limit by at least the width of its watch band. The crew member has 5 minutes to undo a mistaken reading before the ground crew is marked
+            as notified. Simulated in this prototype: nothing is sent off this device.
+          </p>
+          {ground.active.map((alert) => (
+            <div key={alert.key} className={`packet zone-emergency${alertStatus(alert, ground.now) === 'pending' ? ' pending' : ''}`}>
+              <h3>
+                {alert.measurementName}: {alert.valueText}
+              </h3>
+              <p role="status">
+                <strong>{alertStatusText(alert, ground.now)}.</strong>
+              </p>
+              <PacketText text={ground.packetFor(alert)} />
+            </div>
+          ))}
+          {ground.alerts.filter((a) => !ground.active.includes(a)).length > 0 && (
+            <>
+              <h3>Earlier alerts</h3>
+              <ol className="change-list">
+                {ground.alerts
+                  .filter((a) => !ground.active.includes(a))
+                  .slice(0, 10)
+                  .map((alert) => (
+                    <li key={alert.key}>
+                      <span className="num change-when">{formatGmt(alert.createdAt)}</span>
+                      <span>
+                        {alert.measurementName}: {alert.valueText}. {alert.withdrawnAt ? alertStatusText(alert, ground.now) : `${alertStatusText(alert, ground.now)}. A newer reading has been saved since`}.
+                      </span>
+                    </li>
+                  ))}
+              </ol>
+            </>
+          )}
+        </section>
+      )}
 
       <section className="card" aria-label="Red flags">
         <div className="section-head">
@@ -104,11 +155,11 @@ export function SummaryPage() {
                 <Link to={flag.to}>{flag.text}</Link>
               </li>
             ))}
-            {overdue.map((r) => (
-              <li key={`overdue-${r.id}`}>
-                <span className="chip">Overdue</span>
-                <Link to={`/measurements/${encodeURIComponent(r.id)}`}>
-                  {r.m?.name ?? r.id}: {describeDue(r.due ?? now).text.toLowerCase()}
+            {overdue.map((c) => (
+              <li key={`overdue-${c.measurementId}`}>
+                <span className={`chip${c.stage === 3 ? ' chip-flagged' : ''}`}>{c.stage === 3 ? 'Missed check' : 'Overdue'}</span>
+                <Link to={`/measurements/${encodeURIComponent(c.measurementId)}`}>
+                  {c.name}: {lateText(c.lateMs)} overdue. {STAGE_LABEL[c.stage]}.
                 </Link>
               </li>
             ))}

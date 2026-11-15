@@ -5,11 +5,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { useEnvironment } from '../auth/EnvironmentContext';
+import { ExtremeAlertCard, useGroundAlerts } from '../components/alerts/GroundAlerts';
 import { ChangeNotice } from '../components/changes/ChangeHistory';
 import { BadgeShelf, HomeStrip } from '../components/gamification/Gamification';
 import { ErrorState, Loading } from '../components/layout/AppShell';
 import { MeasurementRow } from '../components/measurement/Parts';
-import { CheckInBanner, DuePromptDialog, MoodQuickCheck, ResultSheet } from '../components/prompts/Prompts';
+import { CheckInBanner, DuePromptDialog, FlaggedChecksBanner, MoodQuickCheck, ResultSheet } from '../components/prompts/Prompts';
 import { BodyFigure } from '../components/risk/BodyFigure';
 import { Icon, ZoneChip } from '../components/status/Status';
 import { BODY_AREA_LABEL, bodyAreaOf, type BodyArea } from '../content/bodyAreas';
@@ -17,6 +18,7 @@ import { useBadges, useDashboard, type RiskView } from '../hooks/queries';
 import type { ChangeEntry } from '../lib/changeLog';
 import { DAY, describeDue, toMillis } from '../lib/dates';
 import { badgesFromServer, checkInStreak, readinessScore, readinessZone, takeNewBadges, weekProgress, type Badge } from '../lib/gamification';
+import { missedChecks } from '../lib/reminderEscalation';
 import { ZONE_RANK, worstZone, type Zone } from '../lib/zones';
 
 type CategoryFilter = 'all' | 'physical' | 'psychological';
@@ -56,6 +58,7 @@ export function HomePage() {
   }, [dash.risks]);
 
   // Badges are evaluated by the backend. If that call fails, the rest of Home still works.
+  const ground = useGroundAlerts(dash);
   const badgeSet = useBadges();
   const badges = useMemo(() => badgesFromServer(badgeSet.data, dash.measurements), [badgeSet.data, dash.measurements]);
   const earnedKey = badges.filter((b) => b.earned).map((b) => b.id).join(',');
@@ -75,7 +78,11 @@ export function HomePage() {
     .sort((a, b) => ZONE_RANK[b.zone] - ZONE_RANK[a.zone] || a.score - b.score || a.factor.name.localeCompare(b.factor.name));
 
   const dueToday = dash.upcoming.filter((r) => toMillis(r.dueDate) <= now + DAY);
-  const overdue = dash.upcoming.find((r) => toMillis(r.dueDate) < now - DAY && (dash.histories[r.measurementId] ?? []).length > 0);
+  // Escalating reminders: banner when due, dialog when missed, flag to the Crew Medical Officer.
+  const missed = missedChecks(dash, now);
+  const flagged = missed.filter((c) => c.stage === 3);
+  const prompt = missed.find((c) => c.stage >= 2);
+  const resultAlert = result ? ground.active.find((a) => a.measurementId === result.measurementId) : undefined;
   const nameOf = (id: string) => dash.measurements[id]?.name ?? id.replace(/_/g, ' ');
   const readiness = readinessScore(dash.risks);
   const baselineDone = dash.measurementIds.filter((id) => (dash.histories[id] ?? []).length > 0).length;
@@ -106,6 +113,11 @@ export function HomePage() {
         baseline={{ done: baselineDone, total: dash.measurementIds.length }}
       />
 
+      {!result &&
+        ground.active.map((alert) => (
+          <ExtremeAlertCard key={alert.key} alert={alert} now={ground.now} packet={ground.packetFor(alert)} onSendNow={() => ground.sendNow(alert)} />
+        ))}
+      <FlaggedChecksBanner checks={flagged} />
       {dueToday.length > 0 && <CheckInBanner count={dueToday.length} firstId={dueToday[0].measurementId} firstName={nameOf(dueToday[0].measurementId)} />}
       {mood && <MoodQuickCheck measurement={mood} history={dash.histories.mood_score} />}
 
@@ -174,6 +186,7 @@ export function HomePage() {
           newBadges={newBadges}
           nextUp={nextReminder ? `${nameOf(nextReminder.measurementId)}, ${describeDue(toMillis(nextReminder.dueDate)).text.toLowerCase()}` : undefined}
           change={change}
+          extreme={resultAlert ? { alert: resultAlert, now: ground.now, packet: ground.packetFor(resultAlert), onSendNow: () => ground.sendNow(resultAlert) } : undefined}
           onUndone={(entry) => {
             setNewBadges([]);
             navigate('/', { replace: true, state: { change: entry } });
@@ -194,7 +207,7 @@ export function HomePage() {
               </button>
             </div>
           )}
-          {overdue && <DuePromptDialog id={overdue.measurementId} name={nameOf(overdue.measurementId)} overdueText={describeDue(toMillis(overdue.dueDate)).text} />}
+          {prompt && ground.active.length === 0 && <DuePromptDialog check={prompt} />}
         </>
       )}
     </div>

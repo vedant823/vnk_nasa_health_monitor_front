@@ -92,8 +92,19 @@ instructions and recommendations come from the backend, and every URL is built f
   red (act now), and an emergency state reached by ticking a red-flag symptom.
 - **What to do next:** yellow and red results show a short ladder: you act first, then the Crew
   Medical Officer, then the flight surgeon. Red results offer a ready-to-send report.
-- **Prompts:** a banner when a check is due, a dialog for overdue checks (at most every 4 hours),
-  and a one-tap daily mood check-in.
+- **Escalating reminders:** a due check starts as a quiet banner, becomes a dialog after 24 hours,
+  and after 72 hours is flagged as a missed check on the Crew Medical Officer summary (and the
+  dialog can no longer be skipped for the day). If the measurement's last reading was in the watch
+  range the steps come at 12 and 48 hours, and in the act-now range at 6 and 24 hours. It is all
+  worked out on the device from the backend's due dates (`src/lib/reminderEscalation.ts`). There
+  is also a one-tap daily mood check-in.
+- **Extreme readings:** when a saved reading is past its act-now limit by at least the width of
+  its watch band (for example resting heart rate above 140, where watch starts at 100 and act-now
+  at 120), the app prepares a Crew Medical Officer packet automatically and tells the crew member
+  that the ground crew will be notified in 5 minutes unless the reading is undone. Undoing,
+  deleting or correcting the reading withdraws the alert. **This is simulated:** the prototype
+  sends nothing off the device, and "notified" is a status kept in the browser
+  (`chm.alerts.<username>`, `src/lib/groundAlerts.ts`).
 - **Undo and delete:** right after saving, "Undo this entry" removes the reading just logged. The
   measurement page lists every saved reading with a Delete button. A baseline reading can only be
   deleted once the later readings are gone, because the backend measures them against it.

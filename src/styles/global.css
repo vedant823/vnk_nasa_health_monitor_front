@@ -467,3 +467,16 @@ a.chip:hover { color: var(--accent-ink); }
 }
 .art-mark-bg { fill: rgba(255, 255, 255, 0.92); stroke: none; }
 .art-mark { fill: #33414f; font: 600 7.5px system-ui, sans-serif; letter-spacing: 0.02em; }
+
+/* Escalating reminders and extreme-reading alerts */
+.banner-flagged { background: var(--red-bg); border: 1px solid var(--red); }
+.banner-flagged svg { color: var(--red); flex: none; }
+.due-dialog.flagged { border-top: 6px solid var(--red); }
+.chip-flagged { background: var(--red-bg); color: var(--red); border-color: var(--red); }
+.extreme-alert { border: 2px solid var(--emergency); background: var(--red-bg); display: flex; flex-direction: column; gap: 10px; }
+.extreme-alert h3 { display: flex; align-items: center; gap: 8px; color: var(--emergency); font-size: 18px; }
+.extreme-countdown { font-size: 17px; font-weight: 600; }
+.extreme-countdown .num { font-size: 20px; color: var(--emergency); }
+.packet { border: 1px solid var(--emergency); border-radius: var(--radius-sm); padding: 12px; display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.packet h3 { color: var(--emergency); }
+.packet .report { width: 100%; }
