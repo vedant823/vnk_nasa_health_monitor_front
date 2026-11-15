@@ -4,6 +4,7 @@ import { Navigate } from 'react-router-dom';
 import { Protected } from './auth/EnvironmentContext';
 import { AppShell } from './components/layout/AppShell';
 import { AboutPage, NotFoundPage } from './pages/AboutPage';
+import { CrewMemberPage, CrewPage } from './pages/CrewPage';
 import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
 import { MeasurementOverviewPage } from './pages/MeasurementOverviewPage';
@@ -23,6 +24,8 @@ export default function App() {
         <Route path="/about" element={<Navigate to="/info" replace />} />
         <Route path="/profile" element={<Protected><ProfilePage /></Protected>} />
         <Route path="/summary" element={<Protected><SummaryPage /></Protected>} />
+        <Route path="/crew" element={<Protected><CrewPage /></Protected>} />
+        <Route path="/crew/:childId" element={<Protected><CrewMemberPage /></Protected>} />
         <Route path="/" element={<Protected><HomePage /></Protected>} />
         <Route path="/reminders" element={<Protected><RemindersPage /></Protected>} />
         <Route path="/risks/:riskId" element={<Protected><RiskPage /></Protected>} />

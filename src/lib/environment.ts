@@ -2,7 +2,8 @@
 // Mission environments. The five environments, their communication delay, evacuation notes and the
 // ranges that differ from the space station all come from the team's ranges guide ("Ranges by
 // environment" and "Environments" tabs) and its data file metric_ranges_by_environment.csv.
-// The backend does not store an environment, so the choice is kept in this browser per account.
+// The backend stores the environment (GET and PUT /users/environment) and scores risks with it.
+// This browser only remembers that the crew member has made a choice, so a new account is asked once.
 import type { Measurement } from '../api/types';
 
 export type EnvironmentId = 'spacecraft' | 'station' | 'rover' | 'moon' | 'mars';
@@ -78,7 +79,7 @@ export const DEFAULT_ENVIRONMENT: EnvironmentId = 'station';
 export const environmentById = (id: EnvironmentId | null | undefined): Environment =>
   ENVIRONMENTS.find((e) => e.id === id) ?? ENVIRONMENTS.find((e) => e.id === DEFAULT_ENVIRONMENT)!;
 
-const isEnvironmentId = (value: unknown): value is EnvironmentId => ENVIRONMENTS.some((e) => e.id === value);
+export const isEnvironmentId = (value: unknown): value is EnvironmentId => ENVIRONMENTS.some((e) => e.id === value);
 
 const key = (username: string) => `chm.environment.${username}`;
 

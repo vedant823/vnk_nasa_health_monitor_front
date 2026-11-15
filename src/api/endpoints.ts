@@ -3,6 +3,9 @@
 import { api } from './client';
 import type {
   BadgeSet,
+  ChildOverview,
+  ChildReminder,
+  UserStatus,
   LogMeasurementRequest,
   Measurement,
   MeasurementSet,
@@ -24,6 +27,12 @@ function parseToken(raw: unknown): string {
 }
 
 const asText = { responseType: 'text' as const, transformResponse: [(data: unknown) => data] };
+
+/** Several endpoints answer with a bare word ("mars", "normal", "null"), sometimes JSON-quoted. */
+function plainText(raw: unknown): string {
+  const text = String(raw ?? '').trim();
+  return text.startsWith('"') && text.endsWith('"') ? text.slice(1, -1) : text;
+}
 
 export const auth = {
   /** POST /users/login creates an account. 409 means the username is taken. */
@@ -66,6 +75,49 @@ export const user = {
   setFrequency: async (measurementId: string, frequencyDays: number) => {
     await api.put(`/users/measurements/${enc(measurementId)}/frequency`, { frequencyDays });
   },
+  /**
+   * The medical officer's review of one of your own scans: how many checklist findings were seen.
+   * Without an index it is the newest scan. 403 means you have a medical officer, who reviews for you.
+   */
+  setScore: async (measurementId: string, numAbnormal: number, measurementIndex?: number) => {
+    await api.put(`/users/measurements/${enc(measurementId)}/score`, null, { params: measurementIndex === undefined ? { numAbnormal } : { numAbnormal, measurementIndex } });
+  },
+  /** spacecraft, station, rover, moon or mars. The backend scores risks with this environment's ranges. */
+  getEnvironment: async () => plainText((await api.get('/users/environment', asText)).data),
+  setEnvironment: async (newEnvironment: string) => {
+    await api.put('/users/environment', null, { params: { newEnvironment } });
+  },
+  getStatus: async (): Promise<UserStatus> => (plainText((await api.get('/users/status', asText)).data).toLowerCase() === 'medical officer' ? 'medical officer' : 'normal'),
+  /** 409 while you have a medical officer or assigned crew. */
+  setStatus: async (newStatus: UserStatus) => {
+    await api.put('/users/status', null, { params: { newStatus } });
+  },
+  /** Username of your medical officer, or null when you have none. */
+  getOfficer: async (): Promise<string | null> => {
+    const name = plainText((await api.get('/users/officer', asText)).data);
+    return !name || name === 'null' ? null : name;
+  },
+  /** 404 unknown username; 409 if that user is not a medical officer, is you, or you are one yourself. */
+  setOfficer: async (newOfficer: string) => {
+    await api.put('/users/officer', null, { params: { newOfficer } });
+  },
+};
+
+/** The medical officer's view of the crew assigned to them ("children" on the backend). */
+export const officer = {
+  getChildren: async () => (await api.get<ChildOverview[]>('/users/children')).data,
+  /** Overdue checks across all assigned crew. Medical officers only (403 otherwise). */
+  getOverdue: async () => (await api.get<ChildReminder[]>('/users/overdue')).data,
+  getRiskScores: async (childId: string) => (await api.get<RiskEvaluation[]>(`/users/children/${enc(childId)}/risks`)).data,
+  getHistory: async (childId: string, measurementId: string) =>
+    (await api.get<MeasurementSet[]>(`/users/children/${enc(childId)}/measurements/${enc(measurementId)}`)).data,
+  getUpcoming: async (childId: string, withinDays = 30) =>
+    (await api.get<Reminder[]>(`/users/children/${enc(childId)}/upcoming`, { params: { withinDays } })).data,
+  setScore: async (childId: string, measurementId: string, numAbnormal: number, measurementIndex?: number) => {
+    await api.put(`/users/children/${enc(childId)}/measurements/${enc(measurementId)}/score`, null, {
+      params: measurementIndex === undefined ? { numAbnormal } : { numAbnormal, measurementIndex },
+    });
+  },
 };
 
 export const data = {
@@ -85,4 +137,6 @@ export const data = {
       instructions: m.instructions ?? [],
     };
   },
+  /** The findings a medical officer looks for in a visual measurement (400 for a numerical one). */
+  getFlags: async (measurementId: string) => (await api.get<string[]>(`/data/measurements/${enc(measurementId)}/flags`)).data,
 };

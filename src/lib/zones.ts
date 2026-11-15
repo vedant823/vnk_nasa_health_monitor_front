@@ -51,10 +51,27 @@ export function latestSet(history: MeasurementSet[] | undefined): MeasurementSet
   return sortOldestFirst(history)[history.length - 1];
 }
 
-/** Zone of the latest reading. Visual measurements are stored but not scored, so they stay 'none'. */
+/** The backend's rule for a reviewed scan: no findings is healthy, one is watch, two or more is act now. */
+export const findingsZone = (count: number): 'green' | 'yellow' | 'red' => (count <= 0 ? 'green' : count === 1 ? 'yellow' : 'red');
+
+/** Zone of one scan. 'none' until a medical officer has reviewed it. */
+export function visualZone(set: MeasurementSet | null | undefined): Zone {
+  const count = set?.numAbnormal;
+  return count === null || count === undefined ? 'none' : findingsZone(count);
+}
+
+/** "Awaiting review", "No findings", "1 finding", "3 findings". */
+export function reviewText(set: MeasurementSet | null | undefined): string {
+  const count = set?.numAbnormal;
+  if (count === null || count === undefined) return 'Awaiting review';
+  return count === 0 ? 'No findings' : `${count} finding${count === 1 ? '' : 's'}`;
+}
+
+/** Zone of the latest reading. A scan takes its zone from the medical officer's review. */
 export function measurementZone(m: Measurement | undefined, history: MeasurementSet[] | undefined): Zone {
-  if (!m || m.category === 'visual') return 'none';
+  if (!m) return 'none';
   const latest = latestSet(history);
+  if (m.category === 'visual') return visualZone(latest);
   const value = latest ? setValue(latest) : null;
   return value === null ? 'none' : classify(value, m).zone;
 }

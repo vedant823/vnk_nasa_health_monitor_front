@@ -3,15 +3,17 @@
 // every measurement, and recent changes. It can be printed or read out. Times are in GMT.
 // It also holds the packets prepared automatically for extreme readings and the missed checks that
 // the escalating reminders have flagged.
+import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { useEnvironment } from '../auth/EnvironmentContext';
 import { PacketText, alertStatusText, useGroundAlerts } from '../components/alerts/GroundAlerts';
 import { ChangeList } from '../components/changes/ChangeHistory';
 import { ErrorState, Loading, PageHeader } from '../components/layout/AppShell';
+import { ScanReview } from '../components/scans/ScanReview';
 import { ScoreRing, ZoneChip } from '../components/status/Status';
 import { displayUnit, formatValue, tidyNumbers } from '../content/inputSpecs';
-import { useDashboard } from '../hooks/queries';
+import { useDashboard, useOfficer } from '../hooks/queries';
 import { formatGmt } from '../lib/changeLog';
 import { describeDue, toMillis } from '../lib/dates';
 import { commDelayText, environmentNotes } from '../lib/environment';
@@ -19,7 +21,7 @@ import { RED_FLAGS } from '../lib/escalation';
 import { readinessScore, readinessZone } from '../lib/gamification';
 import { alertStatus } from '../lib/groundAlerts';
 import { STAGE_LABEL, lateText, missedChecks } from '../lib/reminderEscalation';
-import { ZONE_LABEL, ZONE_RANK, latestSet, setValue, type Zone } from '../lib/zones';
+import { ZONE_LABEL, ZONE_RANK, latestSet, reviewText, setValue, sortOldestFirst, type Zone } from '../lib/zones';
 
 interface Flag {
   zone: Zone;
@@ -27,11 +29,20 @@ interface Flag {
   to: string;
 }
 
-export function SummaryPage() {
-  const { username } = useAuth();
+/**
+ * With no props this is the signed-in crew member's own summary. With a child it is a medical
+ * officer's view of an assigned crew member, read through the officer endpoints: links to the
+ * crew member's own pages become plain text, and the parts kept on that crew member's device
+ * (change history, extreme-reading alerts, their environment) are left out.
+ */
+export function SummaryPage({ child }: { child?: { id: string; username: string } }) {
+  const { username: ownName } = useAuth();
   const { environment } = useEnvironment();
-  const dash = useDashboard();
-  const ground = useGroundAlerts(dash);
+  const dash = useDashboard(child?.id);
+  const ground = useGroundAlerts(dash, !child);
+  const myOfficer = useOfficer();
+  const username = child ? child.username : ownName;
+  const Go = ({ to, children }: { to: string; children: ReactNode }) => (child ? <span>{children}</span> : <Link to={to}>{children}</Link>);
 
   if (dash.isLoading) return <Loading />;
   if (dash.error) return <ErrorState error={dash.error} onRetry={dash.refetch} />;
@@ -53,7 +64,9 @@ export function SummaryPage() {
 
   const flags: Flag[] = [];
   for (const r of readings) {
-    if ((r.zone === 'red' || r.zone === 'yellow') && r.m && r.value !== null)
+    if ((r.zone === 'red' || r.zone === 'yellow') && r.m?.category === 'visual')
+      flags.push({ zone: r.zone, text: `${r.m.name}: ${reviewText(r.latest)} on review (${ZONE_LABEL[r.zone]})`, to: `/measurements/${encodeURIComponent(r.id)}` });
+    else if ((r.zone === 'red' || r.zone === 'yellow') && r.m && r.value !== null)
       flags.push({ zone: r.zone, text: `${r.m.name}: ${formatValue(r.value)} ${displayUnit(r.m)} (${ZONE_LABEL[r.zone]})`, to: `/measurements/${encodeURIComponent(r.id)}` });
   }
   for (const r of risks) {
@@ -65,14 +78,17 @@ export function SummaryPage() {
   const overdue = missedChecks(dash, now).filter((c) => c.stage >= 2);
   const flaggedChecks = overdue.filter((c) => c.stage === 3);
   const neverTaken = readings.filter((r) => !r.latest);
-  const notes = environmentNotes(environment);
+  const notes = child ? [] : environmentNotes(environment);
+  const scans = readings.filter((r) => r.m?.category === 'visual' && r.latest);
+  const awaiting = scans.filter((r) => r.latest?.numAbnormal === null || r.latest?.numAbnormal === undefined).length;
 
   return (
     <div className="page summary">
-      <PageHeader title="Crew Medical Officer summary" eyebrow="Summary" back={{ to: '/', label: 'Home' }}>
+      <PageHeader title={child ? `Crew member: ${child.username}` : 'Crew Medical Officer summary'} back={child ? { to: '/crew', label: 'Your crew' } : { to: '/', label: 'Home' }}>
         <div className="chips">
           <span className="chip">Crew member: {username || 'unknown'}</span>
-          <span className="chip">Environment: {environment.name}</span>
+          {!child && <span className="chip">Environment: {environment.name}</span>}
+          {!child && <span className="chip">Medical officer: {myOfficer.data ?? 'none assigned'}</span>}
           <span className="chip num">Prepared {formatGmt(now)}</span>
           <button type="button" className="btn btn-outline no-print" onClick={() => window.print()}>
             Print this page
@@ -90,9 +106,13 @@ export function SummaryPage() {
             {ground.active.length === 1 ? '' : 's'}, {neverTaken.length} measurement
             {neverTaken.length === 1 ? '' : 's'} never taken.
           </p>
-          <p className="muted small">
-            Message delay to Earth: {commDelayText(environment).toLowerCase()}. {environment.care}
-          </p>
+          {child ? (
+            <p className="muted small">Risk scores use the ranges for this crew member's own environment. The health system does not tell a medical officer which environment that is.</p>
+          ) : (
+            <p className="muted small">
+              Message delay to Earth: {commDelayText(environment).toLowerCase()}. {environment.care}
+            </p>
+          )}
         </div>
       </section>
 
@@ -152,15 +172,15 @@ export function SummaryPage() {
             {flags.map((flag) => (
               <li key={flag.text}>
                 <ZoneChip zone={flag.zone} />
-                <Link to={flag.to}>{flag.text}</Link>
+                <Go to={flag.to}>{flag.text}</Go>
               </li>
             ))}
             {overdue.map((c) => (
               <li key={`overdue-${c.measurementId}`}>
                 <span className={`chip${c.stage === 3 ? ' chip-flagged' : ''}`}>{c.stage === 3 ? 'Missed check' : 'Overdue'}</span>
-                <Link to={`/measurements/${encodeURIComponent(c.measurementId)}`}>
+                <Go to={`/measurements/${encodeURIComponent(c.measurementId)}`}>
                   {c.name}: {lateText(c.lateMs)} overdue. {STAGE_LABEL[c.stage]}.
-                </Link>
+                </Go>
               </li>
             ))}
           </ul>
@@ -184,6 +204,27 @@ export function SummaryPage() {
         )}
       </section>
 
+      {scans.length > 0 && (
+        <section className="card" aria-label="Scans">
+          <div className="section-head">
+            <h2>Scans and their review</h2>
+            <span className="muted small">{awaiting === 0 ? 'All reviewed' : `${awaiting} awaiting review`}</span>
+          </div>
+          {scans.map((r) => (
+            <div key={r.id} className="scan-group">
+              <h3>{r.m!.name}</h3>
+              <ScanReview
+                measurement={r.m!}
+                sets={sortOldestFirst(dash.histories[r.id] ?? []).reverse()}
+                reviewer={child ? 'officer' : myOfficer.data ? 'blocked' : 'self'}
+                officerName={myOfficer.data}
+                childId={child?.id}
+              />
+            </div>
+          ))}
+        </section>
+      )}
+
       <section className="card" aria-label="All risks">
         <div className="section-head">
           <h2>All risks</h2>
@@ -204,7 +245,7 @@ export function SummaryPage() {
               {risks.map((r) => (
                 <tr key={r.factor.id}>
                   <td>
-                    <Link to={`/risks/${encodeURIComponent(r.factor.id)}`}>{r.factor.name}</Link>
+                    <Go to={`/risks/${encodeURIComponent(r.factor.id)}`}>{r.factor.name}</Go>
                   </td>
                   <td>{r.factor.category === 'physical' ? 'Physical' : 'Psychological'}</td>
                   <td className="num">{r.zone === 'none' ? '–' : r.score}</td>
@@ -239,20 +280,22 @@ export function SummaryPage() {
               {readings.map((r) => (
                 <tr key={r.id}>
                   <td>
-                    <Link to={`/measurements/${encodeURIComponent(r.id)}`}>{r.m?.name ?? r.id.replace(/_/g, ' ')}</Link>
+                    <Go to={`/measurements/${encodeURIComponent(r.id)}`}>{r.m?.name ?? r.id.replace(/_/g, ' ')}</Go>
                   </td>
                   <td>
                     {!r.latest ? (
                       '–'
                     ) : r.value === null || !r.m ? (
-                      'Image saved'
+                      'Scan saved'
                     ) : (
                       <>
                         <span className="num">{formatValue(r.value)}</span> <span className="muted small">{displayUnit(r.m)}</span>
                       </>
                     )}
                   </td>
-                  <td>{r.m?.category === 'visual' && r.latest ? <span className="chip zone-none">Not scored</span> : <ZoneChip zone={r.zone} label={r.latest ? undefined : 'Not taken yet'} />}</td>
+                  <td>
+                    <ZoneChip zone={r.zone} label={!r.latest ? 'Not taken yet' : r.m?.category === 'visual' ? reviewText(r.latest) : undefined} />
+                  </td>
                   <td className="num">{r.latest ? formatGmt(toMillis(r.latest.timestamp)) : '–'}</td>
                   <td>{r.due === undefined ? '–' : r.latest ? describeDue(r.due).text : 'First reading due'}</td>
                 </tr>
@@ -262,6 +305,7 @@ export function SummaryPage() {
         </div>
       </section>
 
+      {!child && (
       <section className="card" aria-label="Recent changes">
         <div className="section-head">
           <h2>Recent edits, undos and deletes</h2>
@@ -269,6 +313,7 @@ export function SummaryPage() {
         </div>
         <ChangeList limit={10} />
       </section>
+      )}
 
       <p className="muted small">Prototype for demonstration. Not a medical device. The ranges and scores have not been clinically validated.</p>
     </div>

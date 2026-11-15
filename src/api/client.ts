@@ -57,13 +57,14 @@ export function errorMessage(error: unknown, fallback = 'Something went wrong. P
     if (status === 401) return 'Your session ended. Please log in again.';
     if (status === 404) return "We couldn't find that item.";
     const body = error.response.data as unknown;
-    if (status === 400) {
+    if (status === 403) return 'You are not allowed to do that with this account.';
+    if (status === 400 || status === 409) {
       if (typeof body === 'string' && body.length > 0 && body.length < 200) return body;
       if (body && typeof body === 'object') {
         const detail = (body as { detail?: unknown; message?: unknown }).detail ?? (body as { message?: unknown }).message;
         if (typeof detail === 'string' && detail.length > 0) return detail;
       }
-      return 'That entry was not accepted. Check the value and try again.';
+      return status === 409 ? 'That change conflicts with how this account is set up.' : 'That entry was not accepted. Check the value and try again.';
     }
   }
   return fallback;

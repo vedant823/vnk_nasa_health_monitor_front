@@ -1,0 +1,14 @@
+{
+    "measurements": [
+        {
+            "measurementID": "oct_fundus_scan",
+            "flags": [
+            "Optic disc cupping and margin elevation (papilledema indicators)",
+            "Retinal nerve fiber layer peripapillary wrinkles (folds)",
+            "Presence of cotton wool spots and retinal hemorrhages near the optic nerve head",
+            "Retinal vessel tortuosity (increased vessel diameter, engorgement, and kinking)",
+            "Image blur or optic disc off-center requiring immediate re-capture"
+            ]
+        }
+    ]
+}
