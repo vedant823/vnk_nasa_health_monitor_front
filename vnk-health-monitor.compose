@@ -1,0 +1,30 @@
+# vnk-nasa-health-monitor — full stack
+# Usage: docker compose -f vnk-health-monitor.compose up -d
+
+services:
+  mongo:
+    image: mongo:8
+    container_name: vnk-health-monitor-mongo
+    restart: always
+    volumes:
+      - ./data/mongo:/data/db
+    # No ports published: mongo is only reachable from the app containers
+    # on the internal network.
+
+  back:
+    image: fedora-server:5000/vnk-nasa-health-monitor-back:latest
+    container_name: vnk-health-monitor-back
+    restart: always
+    ports:
+      - "8081:80"
+    environment:
+      - MONGODB_URI=mongodb://mongo:27017/vnk_health_monitor
+
+  front:
+    image: fedora-server:5000/vnk-nasa-health-monitor-front:latest
+    container_name: vnk-health-monitor-front
+    restart: always
+    ports:
+      - "8080:80"
+    depends_on:
+      - back
