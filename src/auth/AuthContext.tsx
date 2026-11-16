@@ -4,6 +4,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { TOKEN_KEY, USERNAME_KEY, setUnauthorizedHandler } from '../api/client';
 import { auth } from '../api/endpoints';
+import { setGuest } from '../lib/guestMode';
 
 interface AuthState {
   token: string | null;
@@ -13,6 +14,8 @@ interface AuthState {
   login: (username: string, password: string) => Promise<void>;
   register: (username: string, password: string) => Promise<void>;
   logout: () => void;
+  /** Signs in with a token that guest mode already has. */
+  adopt: (token: string, username: string) => void;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -60,9 +63,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       register: async (name, password) => store(await auth.register(name.trim(), password), name.trim()),
       // The backend has no logout endpoint, so logging out only forgets the token on this device.
       logout: () => {
+        setGuest(false);
         clear();
         setSessionEnded(false);
       },
+      adopt: (newToken, name) => store(newToken, name),
     }),
     [token, username, sessionEnded, store, clear],
   );

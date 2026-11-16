@@ -6,6 +6,8 @@ import { USE_MOCKS, errorMessage } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { WhyPanel } from '../components/explain/WhyPanel';
 import { AppMark } from '../components/layout/AppShell';
+import { GuestStart } from '../components/guest/Guest';
+import { isGuest } from '../lib/guestMode';
 import { GENERAL_EXPLAINER } from '../content/explainers';
 
 export function LoginPage() {
@@ -18,7 +20,8 @@ export function LoginPage() {
   const [busy, setBusy] = useState<'login' | 'register' | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  if (token) return <Navigate to="/" replace />;
+  // Guest mode opens on the medical officer's crew page.
+  if (token) return <Navigate to={isGuest() ? '/crew' : '/'} replace />;
 
   const submit = async (mode: 'login' | 'register') => {
     if (!username.trim() || !password) {
@@ -87,6 +90,7 @@ export function LoginPage() {
         <p className="muted small">Both buttons use the username and password above. Your health data stays on this mission's system.</p>
         {USE_MOCKS && <p className="note small">Demo mode: create an account named "demo" to see three weeks of simulated readings.</p>}
       </form>
+      <GuestStart />
       <div className="login-why">
         <WhyPanel why={GENERAL_EXPLAINER.why} space={GENERAL_EXPLAINER.space} whyTitle="Why are these exams needed?" />
       </div>

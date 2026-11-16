@@ -35,7 +35,8 @@ const isLoginCall = (url?: string) => (url ?? '').startsWith('/users/login');
 api.interceptors.request.use((request) => {
   const token = localStorage.getItem(TOKEN_KEY);
   // /users/** needs the Bearer token; /data/** is public and login has no token yet.
-  if (token && request.url?.startsWith('/users/') && !isLoginCall(request.url)) {
+  // A request that already carries a token (guest mode setting up a demo account) keeps it.
+  if (token && !request.headers.has('Authorization') && request.url?.startsWith('/users/') && !isLoginCall(request.url)) {
     request.headers.set('Authorization', `Bearer ${token}`);
   }
   return request;

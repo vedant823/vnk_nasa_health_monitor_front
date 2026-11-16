@@ -321,7 +321,12 @@ function healthData(u: MockUser, username: string, scorer: MockUser, rest: strin
           if (typeof body.image !== 'string' || !body.image.trim()) throw new HttpError(400, "Visual measurement requires an 'image'");
           images = [body.image];
         }
-        (u.history[m.id] ??= []).push({ timestamp: new Date().toISOString(), values, images, numAbnormal: null });
+        // Demo mode only: guest mode may pass an earlier time so its starting readings are spread
+        // over a few weeks. The real backend stamps every reading with the time it arrives.
+        const when = typeof body.timestamp === 'string' && !Number.isNaN(Date.parse(body.timestamp)) ? body.timestamp : new Date().toISOString();
+        const list = (u.history[m.id] ??= []);
+        list.push({ timestamp: when, values, images, numAbnormal: null });
+        list.sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
         save();
         return '';
       }

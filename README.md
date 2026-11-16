@@ -96,6 +96,26 @@ Nothing about risks or measurements is hardcoded in the screens. The lists, ids,
 instructions and recommendations come from the backend, and every URL is built from backend ids
 (`/risks/:riskId`, `/measurements/:measurementId`, `/measurements/:measurementId/perform`).
 
+### Guest mode
+
+The login page has a **View in guest mode** button. It logs in as the demo Crew Medical Officer
+`testOfficer` and opens its Crew page. A bar under the top bar then lets the visitor switch to any
+crew member and see the app as them, reset one account or all of them to their starting data,
+and leave guest mode.
+
+- Guest mode uses the crew already assigned to `testOfficer` that it can log in to. If there are
+  fewer than three, it adds `testCrewAva` (Moon base), `testCrewBen` (space station) and
+  `testCrewCai` (Mars base) and assigns them to `testOfficer`.
+- An account with no readings gets a few weeks of made-up but realistic readings, one profile per
+  crew member (mostly healthy with slipping sleep; weight, muscle and lymphocytes to watch;
+  heart rate in the act-now range). Accounts that already have readings are left alone.
+- **Reset** deletes every reading on that account, logs the starting readings again and restores
+  its environment and role. It uses only the normal endpoints, so it changes the real database.
+- The demo password is in the front end on purpose (`src/lib/guestMode.ts`), because these are
+  public demo accounts. `VITE_GUEST_PASSWORD` and `VITE_GUEST_CREW_PASSWORD` override it.
+- The backend stamps every reading with the time it arrives, so on the real backend all starting
+  readings share today's date. Demo mode spreads them over the past weeks.
+
 ### Backend endpoints used
 
 | Screen | Endpoints |

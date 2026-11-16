@@ -5,6 +5,7 @@ import { USE_MOCKS, errorMessage } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
 import { useStatus } from '../../hooks/queries';
 import { Icon } from '../status/Status';
+import { GuestBar } from '../guest/Guest';
 
 /** Original app mark: a pulse line on a square ink plate, with a cobalt reading point. Not based on any agency logo or insignia. */
 export function AppMark({ size = 28 }: { size?: number }) {
@@ -67,6 +68,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           )}
         </div>
       </header>
+      {token && <GuestBar />}
       {USE_MOCKS && (
         <div className="demo-bar" role="note">
           Demo mode: readings are simulated and stay in this browser. They are not real crew data.

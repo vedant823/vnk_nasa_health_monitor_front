@@ -42,6 +42,7 @@ const HOW_IT_WORKS: { title: string; text: string }[] = [
   { title: 'Extreme readings', text: 'If a reading is far past its act-now limit, the app prepares a packet for the Crew Medical Officer and tells you the ground crew will be notified in 5 minutes unless you undo the reading. In this prototype that notification is simulated: nothing leaves the device.' },
   { title: 'Get your scans reviewed', text: 'An eye scan is scored by a person, not by AI. The reviewer ticks every finding they can see on a checklist: none is healthy, one is watch, two or more is act now. Your medical officer reviews your scans. If you have no medical officer, you review your own.' },
   { title: 'Work as a medical officer', text: 'On the Profile page an account can become a medical officer, and a crew member can name their medical officer by username. A medical officer gets a Crew page with every assigned crew member, their risks, overdue checks and scans to review.' },
+  { title: 'Try guest mode', text: 'On the login page, View in guest mode opens a demo medical officer and their crew. The readings are made up. Switch between the accounts to see each view, and reset any account to its starting data.' },
   { title: 'Earn badges', text: 'Regular check-ins build a streak, fill the weekly bar and earn badges. They are there to make a daily habit easier to keep.' },
   { title: 'Share with the Crew Medical Officer', text: 'The Crew Medical Officer summary puts all risks, latest readings, red flags and recent changes on one page that can be printed or read out.' },
 ];
